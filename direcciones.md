@@ -51,30 +51,51 @@ UAJS-Smart-Campus/
 │   │   │
 │   │   ├── components/               # Componentes reutilizables
 │   │   │   ├── Button/
+│   │   │   │   ├── Button.css        # Estilos del botón
+│   │   │   │   └── Button.jsx        # Botón reutilizable (variantes y tamaños)
 │   │   │   ├── Card/
 │   │   │   ├── Input/
+│   │   │   │   ├── Input.css        # Estilos del campo de texto
+│   │   │   │   └── Input.jsx        # Input reutilizable
 │   │   │   ├── Loader/
 │   │   │   ├── Modal/
+│   │   │   │   ├── Modal.css        # Estilos del modal
+│   │   │   │   └── Modal.jsx        # Modal reutilizable
 │   │   │   ├── Navbar/
 │   │   │   │   ├── Navbar.css        # Estilos de la barra de navegación
 │   │   │   │   └── Navbar.jsx        # Barra de navegación
+│   │   │   ├── ServiceCard/
+│   │   │   │   ├── ServiceCard.css   # Estilos de la tarjeta de servicio
+│   │   │   │   └── ServiceCard.jsx   # Tarjeta de servicio
 │   │   │   ├── Sidebar/
 │   │   │   │   ├── Sidebar.css       # Estilos del menú lateral
 │   │   │   │   └── Sidebar.jsx       # Menú lateral
+│   │   │   ├── StatusBadge/
+│   │   │   │   ├── StatusBadge.css   # Estilos del badge de estado
+│   │   │   │   └── StatusBadge.jsx   # Badge de estado con color según el estado
 │   │   │   └── Table/
 │   │   │
 │   │   ├── context/                  # Contextos globales de React
 │   │   ├── hooks/                    # Custom hooks
+│   │   │   └── useSearch.js          # Filtra listas por consulta (useMemo)
 │   │   ├── layouts/                  # Layouts de la aplicación
 │   │   │   ├── DashboardLayout.css   # Estilos del layout
 │   │   │   └── DashboardLayout.jsx   # Layout del dashboard
 │   │   ├── pages/                    # Páginas / vistas
+│   │   │   ├── Landing/
+│   │   │   │   ├── Landing.css       # Estilos de la landing
+│   │   │   │   └── Landing.jsx       # Landing de acceso (redirección a los 5s)
+│   │   │   ├── Servicio/
+│   │   │   │   ├── Servicio.css      # Estilos de la vista de servicio
+│   │   │   │   └── Servicio.jsx      # Detalle de servicio (recursos y opciones)
 │   │   │   ├── Configuracion/
-│   │   │   │   └── Configuracion.jsx # Configuración del sistema
+│   │   │   │   ├── Configuracion.jsx # Configuración del sistema
+│   │   │   │   └── Configuracion.css # Estilos de configuración
 │   │   │   ├── Dashboard/
 │   │   │   │   └── Dashboard.jsx     # Vista principal
 │   │   │   ├── Eventos/
 │   │   │   │   ├── Eventos.jsx       # Gestión de eventos
+│   │   │   │   ├── Eventos.css       # Estilos de eventos
 │   │   │   │   ├── Calendario/
 │   │   │   │   ├── Inscripciones/
 │   │   │   │   └── Publicaciones/
@@ -82,30 +103,40 @@ UAJS-Smart-Campus/
 │   │   │   ├── Login/
 │   │   │   ├── Notificaciones/
 │   │   │   │   ├── Notificaciones.jsx # Gestión de notificaciones
+│   │   │   │   ├── Notificaciones.css # Estilos de notificaciones
 │   │   │   │   ├── Correos/
 │   │   │   │   ├── Push/
 │   │   │   │   └── Alertas/
 │   │   │   ├── Perfil/
 │   │   │   │   ├── Perfil.jsx        # Perfil de usuario
+│   │   │   │   ├── Perfil.css        # Estilos del perfil
 │   │   │   │   ├── Datospersonales/
 │   │   │   │   ├── Seguridad/
 │   │   │   │   └── Cambiodecontraseña/
 │   │   │   ├── PQRS/
 │   │   │   │   ├── PQRS.jsx          # Peticiones, quejas, reclamos y sugerencias
+│   │   │   │   ├── PQRS.css          # Estilos de PQRS
 │   │   │   │   ├── MisPQRS/
 │   │   │   │   └── NuevaPQRS/
+│   │   │   │       ├── NuevaPQRS.jsx # Formulario de nueva PQRS
+│   │   │   │       └── NuevaPQRS.css # Estilos del formulario
 │   │   │   ├── Programas/
 │   │   │   ├── Recursos/
-│   │   │   │   └── Recursos.jsx      # Gestión de recursos
+│   │   │   │   ├── Recursos.jsx      # Gestión de recursos (catálogo)
+│   │   │   │   └── Recursos.css      # Estilos del catálogo de recursos
 │   │   │   ├── Reservas/
 │   │   │   │   ├── Reservas.jsx      # Gestión de reservas
+│   │   │   │   ├── Reservas.css      # Estilos de reservas
 │   │   │   │   ├── Salones/
 │   │   │   │   ├── Laboratorios/
 │   │   │   │   ├── Auditorios/
 │   │   │   │   └── Equipos/
 │   │   │   ├── Roles/
 │   │   │   ├── Solicitudes/
-│   │   │   │   └── Solicitudes.jsx   # Solicitudes de reservas
+│   │   │   │   ├── Solicitudes.jsx   # Solicitudes de reservas (listado)
+│   │   │   │   ├── SolicitudDetalle.jsx # Detalle de solicitud con evolución
+│   │   │   │   ├── Solicitudes.css   # Estilos del listado
+│   │   │   │   └── SolicitudDetalle.css # Estilos del detalle
 │   │   │   └── Usuarios/
 │   │   │       ├── CRUDusuarios/
 │   │   │       ├── Roles/
@@ -169,7 +200,13 @@ UAJS-Smart-Campus/
 │   │   │       ├── _layout.css
 │   │   │       └── _spacing.css
 │   │   ├── utils/                    # Utilidades y helpers
-│   │   │   └── menu.js               # Configuración del menú
+│   │   │   ├── menu.js               # Configuración del menú
+│   │   │   ├── services.js           # Datos de los servicios (fuente única)
+│   │   │   ├── solicitudes.js        # Datos mock de solicitudes + estados
+│   │   │   ├── recursos.js           # Datos mock de recursos disponibles
+│   │   │   ├── notificaciones.js     # Datos mock de notificaciones
+│   │   │   ├── eventos.js            # Datos mock de eventos
+│   │   │   └── pqrs.js               # Datos mock de PQRS + tipos
 │   │   │
 │   │   ├── App.jsx                   # Componente raíz
 │   │   ├── index.css
@@ -209,6 +246,8 @@ UAJS-Smart-Campus/
 - La estructura de carpetas del **backend** y el **frontend** ya está creada.
 - El frontend fue generado con **Vite** (`npm create vite`).
 - Páginas implementadas (`*.jsx`):
+  - `pages/Landing/Landing.jsx`
+  - `pages/Servicio/Servicio.jsx`
   - `pages/Configuracion/Configuracion.jsx`
   - `pages/Dashboard/Dashboard.jsx`
   - `pages/Eventos/Eventos.jsx`
@@ -218,11 +257,27 @@ UAJS-Smart-Campus/
   - `pages/Recursos/Recursos.jsx`
   - `pages/Reservas/Reservas.jsx`
   - `pages/Solicitudes/Solicitudes.jsx`
+  - `pages/Solicitudes/SolicitudDetalle.jsx`
 - Componentes y utilidades implementadas:
+  - `components/Button/Button.jsx` + `Button.css`
+  - `components/Input/Input.jsx` + `Input.css`
+  - `components/Modal/Modal.jsx` + `Modal.css`
+  - `components/ServiceCard/ServiceCard.jsx` + `ServiceCard.css`
   - `components/Navbar/Navbar.jsx` + `Navbar.css`
   - `components/Sidebar/Sidebar.jsx` + `Sidebar.css`
+  - `components/StatusBadge/StatusBadge.jsx` + `StatusBadge.css`
+  - `hooks/useSearch.js`
   - `layouts/DashboardLayout.jsx` + `DashboardLayout.css`
-  - `routes/AppRoutes.jsx`
+  - `routes/AppRoutes.jsx` (13 rutas)
   - `utils/menu.js`
+  - `utils/services.js`
+  - `utils/solicitudes.js`
+  - `utils/recursos.js`
+  - `utils/notificaciones.js`
+  - `utils/eventos.js`
 - Sistema de estilos **ITCSS** implementado en `styles/` (abstracts, base, blocks, components, pages, utils) con `main.css`.
-- El resto de los archivos de los módulos aún están por implementar.
+- **Rediseño visual** aplicado: paleta institucional navy + dorado y tipografías Playfair Display + Inter definidas como variables CSS en `index.css`; todos los componentes y páginas migrados a `var(--...)`.
+- **Modo oscuro** implementado (diseño universal): temas claro/oscuro vía tokens en `[data-theme]` + `prefers-color-scheme`, script inline en `index.html` para evitar parpadeo y toggle ☀️/🌙 en el Navbar con persistencia en `localStorage`.
+- **Módulo 8.1 Autenticación y usuarios** implementado: `pages/Login` (`/login`), `pages/Recuperar` (`/recuperar`), `pages/Usuarios` (`/usuarios`, CRUD con roles), `context/AuthContext.jsx` + `context/useAuth.js` (sesión persistida), `components/ProtectedRoute` (protección por sesión y permiso), menú filtrado por rol y Navbar dinámico.
+- **Roles según sección 7** (Usuarios del sistema): Estudiante, Docente, Administrativo y Administrador con permisos por módulo y acciones granulares (`puede(accion)`); botones condicionados por rol en Solicitudes (registrar/avanzar estado), Recursos (nuevo), Eventos (publicar) y Reservas (cancelar).
+- **Las 10 vistas de la Actividad Integrativa están funcionales.** Quedan pendientes: backend, despliegue en Vercel y videomemoria.
