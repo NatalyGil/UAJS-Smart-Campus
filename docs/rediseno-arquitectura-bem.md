@@ -1,18 +1,19 @@
-# Rediseño UI y Mejora de Arquitectura CSS — UAJS Smart Campus
+# Rediseño UI, Arquitectura CSS BEM e Identidad UAJS — Smart Campus
 
 ## Resumen
 
-Se realizó una modernización completa del diseño visual y se reestructuró la arquitectura CSS siguiendo metodología **BEM**, con sistema de **design tokens**, componentes modulares y páginas coherentes. El resultado es un frontend más mantenible, escalable y con una estética contemporánea.
+Se realizó una modernización completa del diseño visual alineada a la identidad institucional de la **Corporación Universitaria Antonio José de Sucre (UAJS)**, con metodología **BEM**, sistema de **design tokens**, componentes modulares y páginas coherentes. El resultado es un frontend más mantenible, escalable y con una estética contemporánea que refleja los valores de la universidad.
 
 ---
 
 ## Cambios en el Diseño Visual
 
 ### Paleta de Colores
-- **Navy institucional refinado**: Tonos más profundos y modernos (`#0f2744`, `#1e3a5f`)
-- **Dorado actualizado**: Paleta ampliada con variantes más cálidas (`#c7a11f`, `#e0c04f`, `#e8d078`)
+- **Verde institucional UAJS**: Verde bosque oscuro como primario (`#0b3d2e`, `#15503f`, `#34a88a`)
+- **Dorado institucional**: Paleta dorada para acentos y elementos destacados (`#c7a11f`, `#e0c04f`, `#e8d078`)
+- **Fondos institucionales**: Landing y login con gradientes verde-dorado (`#071f18` + dorado)
 - **Grises mejorados**: Contraste optimizado para mejor legibilidad
-- **Modo oscuro completo**: Todos los tokens tienen variantes dark con transiciones suaves
+- **Modo oscuro completo**: Tokens dark con verdes profundos y dorados coherentes
 
 ### Tipografía
 - **Escala fluida**: Uso de `clamp()` para títulos responsivos
@@ -35,6 +36,12 @@ Se realizó una modernización completa del diseño visual y se reestructuró la
 - **Estados visuales**: Error (rojo), éxito (verde), required indicator
 - **Selects estilizados**: Flecha SVG personalizada, focus states consistentes
 - **Textareas**: Resize vertical, mejor padding y tipografía
+
+### Adaptación Institucional UAJS
+- **Sidebar**: Gradiente verde institucional `#071f18` → `#0b3d2e`
+- **Landing/Login**: Gradientes de fondo verde-dorado con overlay sutil
+- **Identidad visual coherente**: Verde como color primario, dorado como acento
+- **Respeto por marca**: No se alteraron logos ni tipografía institucional
 
 ---
 
@@ -112,12 +119,13 @@ Estilos específicos por página, todos siguiendo BEM:
 
 ### Variables CSS (`_variables.css`)
 ```css
-/* Design tokens centralizados */
---color-primary: #0f2744;
---color-primary-600: #14304d;
+/* Design tokens centralizados - Identidad UAJS */
+--color-primary: #0b3d2e;
+--color-primary-600: #0f4c3a;
 --color-accent: #c7a11f;
+--color-accent-light: #e0c04f;
 --radius: 12px;
---shadow-md: 0 4px 12px rgba(15, 39, 68, 0.08);
+--shadow-md: 0 4px 12px rgba(11, 61, 46, 0.08);
 --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 --space-4: 16px;
 --sidebar-width: 260px;
@@ -205,6 +213,12 @@ Estilos específicos por página, todos siguiendo BEM:
 ### Layout
 - `src/layouts/DashboardLayout.css` → Actualizado con tokens
 
+### Adaptación UAJS
+- `src/styles/abstracts/_variables.css` → Paleta verde/dorado institucional
+- `src/components/Sidebar/Sidebar.css` → Gradiente verde UAJS
+- `src/pages/Landing/Landing.css` → Gradiente verde-dorado
+- `src/pages/Login/Login.css` → Gradiente verde-dorado
+
 ### Páginas
 - `src/pages/Landing/Landing.css` → Rediseñada
 - `src/pages/Login/Login.css` → Rediseñada
@@ -229,15 +243,21 @@ Estilos específicos por página, todos siguiendo BEM:
 ### Build
 ```bash
 npm run build
-# ✓ built in 239ms
-# dist/assets/index-CxcrR5s7.css   75.39 kB │ gzip: 10.47 kB
-# dist/assets/index-Mafbmu8G.js   295.53 kB │ gzip: 87.71 kB
+# ✓ built in 253ms
+# dist/assets/index-DOYpRpn4.css   75.41 kB │ gzip: 10.48 kB
+# dist/assets/index-Cty8YXat.js   295.53 kB │ gzip: 87.71 kB
 ```
 
 ### Lint
 ```bash
 npm run lint
 # ✓ ESLint: 0 errores, 0 warnings
+```
+
+### Commits
+```bash
+# 1. Rediseño UI y arquitectura CSS BEM
+# 2. Adaptación a identidad institucional UAJS
 ```
 
 ---
