@@ -1,3 +1,8 @@
+/* ==========================================
+   Block: Input
+   BEM: .input, .input--modifier, .input__element
+   ========================================== */
+
 .input {
     display: flex;
     flex-direction: column;
@@ -79,6 +84,7 @@
     font-size: 15px;
 }
 
+/* Contenedor para toggle de contraseña */
 .input__wrap {
     position: relative;
     display: flex;
@@ -110,4 +116,25 @@
 .input__toggle:hover {
     color: var(--color-primary-500);
     background-color: var(--color-hover);
+}
+
+/* Mensajes de ayuda y error */
+.input__hint {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+}
+
+.input__error {
+    font-size: 12px;
+    color: var(--color-danger);
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.input__success {
+    font-size: 12px;
+    color: var(--color-success);
+    font-weight: 500;
+    line-height: 1.4;
 }
