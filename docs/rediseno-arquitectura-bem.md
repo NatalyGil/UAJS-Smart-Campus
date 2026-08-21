@@ -9,11 +9,11 @@ Se realizó una modernización completa del diseño visual alineada a la identid
 ## Cambios en el Diseño Visual
 
 ### Paleta de Colores
-- **Verde institucional UAJS**: Verde bosque oscuro como primario (`#0b3d2e`, `#15503f`, `#34a88a`)
-- **Dorado institucional**: Paleta dorada para acentos y elementos destacados (`#c7a11f`, `#e0c04f`, `#e8d078`)
-- **Fondos institucionales**: Landing y login con gradientes verde-dorado (`#071f18` + dorado)
+- **Azul institucional UAJS**: Azul oscuro profesional como primario (`#0f2744`, `#1d4b77`, `#4a80b0`)
+- **Blanco institucional**: Paleta de blancos para fondos y acentos (`#ffffff`, `#f5f8fb`, `#e8eef5`)
+- **Fondos institucionales**: Landing y login con gradientes azul-blanco (`#0a1e35` + blanco)
 - **Grises mejorados**: Contraste optimizado para mejor legibilidad
-- **Modo oscuro completo**: Tokens dark con verdes profundos y dorados coherentes
+- **Modo oscuro completo**: Tokens dark con azules profundos y blancos rotos coherentes
 
 ### Tipografía
 - **Escala fluida**: Uso de `clamp()` para títulos responsivos
@@ -38,9 +38,9 @@ Se realizó una modernización completa del diseño visual alineada a la identid
 - **Textareas**: Resize vertical, mejor padding y tipografía
 
 ### Adaptación Institucional UAJS
-- **Sidebar**: Gradiente verde institucional `#071f18` → `#0b3d2e`
-- **Landing/Login**: Gradientes de fondo verde-dorado con overlay sutil
-- **Identidad visual coherente**: Verde como color primario, dorado como acento
+- **Sidebar**: Gradiente azul institucional `#0a1e35` → `#0f2744`
+- **Landing/Login**: Gradientes de fondo azul-blanco con overlay sutil
+- **Identidad visual coherente**: Azul como color primario, blanco como acento
 - **Respeto por marca**: No se alteraron logos ni tipografía institucional
 
 ---
@@ -119,13 +119,13 @@ Estilos específicos por página, todos siguiendo BEM:
 
 ### Variables CSS (`_variables.css`)
 ```css
-/* Design tokens centralizados - Identidad UAJS */
---color-primary: #0b3d2e;
---color-primary-600: #0f4c3a;
---color-accent: #c7a11f;
---color-accent-light: #e0c04f;
+/* Design tokens centralizados - Identidad UAJS azul/blanco */
+--color-primary: #0f2744;
+--color-primary-600: #14304d;
+--color-primary-500: #1d4b77;
+--color-accent: #ffffff;
 --radius: 12px;
---shadow-md: 0 4px 12px rgba(11, 61, 46, 0.08);
+--shadow-md: 0 4px 12px rgba(15, 39, 68, 0.08);
 --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 --space-4: 16px;
 --sidebar-width: 260px;
@@ -213,11 +213,11 @@ Estilos específicos por página, todos siguiendo BEM:
 ### Layout
 - `src/layouts/DashboardLayout.css` → Actualizado con tokens
 
-### Adaptación UAJS
-- `src/styles/abstracts/_variables.css` → Paleta verde/dorado institucional
-- `src/components/Sidebar/Sidebar.css` → Gradiente verde UAJS
-- `src/pages/Landing/Landing.css` → Gradiente verde-dorado
-- `src/pages/Login/Login.css` → Gradiente verde-dorado
+### Adaptación UAJS (azul/blanco)
+- `src/styles/abstracts/_variables.css` → Paleta azul/blanco institucional
+- `src/components/Sidebar/Sidebar.css` → Gradiente azul UAJS
+- `src/pages/Landing/Landing.css` → Gradiente azul-blanco
+- `src/pages/Login/Login.css` → Gradiente azul-blanco
 
 ### Páginas
 - `src/pages/Landing/Landing.css` → Rediseñada
