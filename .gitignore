@@ -5,11 +5,18 @@ node_modules/
 .env
 .env.local
 .env.*.local
+*.local
 
 # Build
 dist/
 dist-ssr/
 build/
+.vite/
+
+# Cache
+.cache/
+.parcel-cache/
+coverage/
 
 # Logs
 *.log
@@ -23,11 +30,17 @@ lerna-debug.log*
 .vscode/
 !.vscode/extensions.json
 .idea/
+*.swp
+*.swo
 
 # Sistema
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # Archivos temporales
 *.tmp
 *.temp
+*.bak
+*~
