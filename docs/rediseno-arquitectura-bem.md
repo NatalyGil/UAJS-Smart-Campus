@@ -243,9 +243,15 @@ Estilos específicos por página, todos siguiendo BEM:
 ### Build
 ```bash
 npm run build
+<<<<<<< HEAD
 # ✓ built in 253ms
 # dist/assets/index-DOYpRpn4.css   75.41 kB │ gzip: 10.48 kB
 # dist/assets/index-Cty8YXat.js   295.53 kB │ gzip: 87.71 kB
+=======
+# ✓ built in 240ms
+# dist/assets/index-Ed_eldHU.css   75.40 kB │ gzip: 10.44 kB
+# dist/assets/index-Di9HPSSY.js   295.53 kB │ gzip: 87.71 kB
+>>>>>>> main
 ```
 
 ### Lint
@@ -256,8 +262,15 @@ npm run lint
 
 ### Commits
 ```bash
+<<<<<<< HEAD
 # 1. Rediseño UI y arquitectura CSS BEM
 # 2. Adaptación a identidad institucional UAJS
+=======
+# 1. refactor: rediseño UI y arquitectura CSS BEM
+# 2. feat: adaptar diseño a identidad institucional UAJS
+# 3. docs: actualizar registro de rediseño con identidad UAJS
+# 4. fix: adaptar paleta UAJS a azul y blanco
+>>>>>>> main
 ```
 
 ---
