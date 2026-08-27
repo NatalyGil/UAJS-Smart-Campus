@@ -308,7 +308,7 @@ El modelo de roles se alineó con la especificación del documento (7. Usuarios 
 |-----|---------|---------------------|
 | **Estudiante** | Dashboard, Solicitudes, Reservas, Recursos, Notificaciones, Eventos, PQRS, Perfil | Registrar solicitudes, consultar su estado, solicitar recursos, realizar reservas |
 | **Docente** | + Recursos, + Reservas | Consultar solicitudes, solicitar recursos, gestionar reservas, publicar eventos |
-| **Administrativo** | todos excepto Usuarios y Configuración | Gestionar solicitudes, actualizar estados, administrar recursos, gestionar reservas, atender requerimientos, generar reportes |
+| **Administrativo** | todos excepto Usuarios y Configuración | Gestionar solicitudes, actualizar estados, administrar recursos, gestionar reservas, atender requerimientos |
 | **Administrador** | todos los módulos | Administrar usuarios y roles, gestionar servicios y configuraciones, consultar estadísticas, supervisar |
 
 **Mecánica:**
