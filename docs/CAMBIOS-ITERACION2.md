@@ -151,13 +151,13 @@ Normalizados (antes `node:18-alpine` y formato comprimido sin saltos de línea, 
 | `notifications-service` | 3005 |
 | `requests-service` | 3006 |
 | `resources-service` | 3007 |
-| `pqrs-service` | 3008 |
-| `info-academica-service` | 3009 |
-| `configuracion-service` | 3010 |
+| `feedback-service` | 3008 |
+| `academic-info-service` | 3009 |
+| `configuration-service` | 3010 |
 
 Ajustes menores:
 - `users-service`: se eliminó un **espacio en blanco** tras `EXPOSE 3002` para igualar el formato.
-- `info-academica-service`: su EXPOSE pasó de **3023 → 3009** para alinearlo con el `docker-compose.yml` raíz y el gateway.
+- `academic-info-service`: su EXPOSE pasó de **3023 → 3009** para alinearlo con el `docker-compose.yml` raíz y el gateway.
 
 Con esto, **todos los servicios (y el gateway) usan el mismo patrón** que `auth-service`.
 
@@ -203,11 +203,11 @@ networks:
 | `notifications-service` | 3005 |
 | `requests-service` | 3006 |
 | `resources-service` | 3007 |
-| `pqrs-service` | 3008 |
-| `configuracion-service` | 3010 |
+| `feedback-service` | 3008 |
+| `configuration-service` | 3010 |
 
 **Reescrito** (era el template genérico `server` con NODE_ENV):
-- `info-academica-service` → puerto **3009** (consistente con `docker-compose.yml` raíz y gateway).
+- `academic-info-service` → puerto **3009** (consistente con `docker-compose.yml` raíz y gateway).
 
 **Corregido**:
 - `gateway/compose.yaml`: `env_file` de `../.env` → **`../../.env`** para apuntar al `.env` de la raíz (su ubicación difiere: está en `backend/gateway/`, no en `backend/services/*/`).

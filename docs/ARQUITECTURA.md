@@ -17,8 +17,8 @@ La plataforma se divide en dos aplicaciones independientes que se comunican por 
 └────────────────────┘                                       │ /api/<servicio>
                                                              ▼
    ┌──────────┬──────────┬──────────┬──────────┬───────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
-   │ auth     │ users    │ events   │ reservas │ notif.    │ requests │ resources│ pqrs     │ info-acad│ config.  │
-   │ 3001     │ 3002     │ 3003     │ 3004     │ 3005      │ 3006     │ 3007     │ 3008     │ 3009     │ 3010     │
+    │ auth     │ users    │ events   │ reservas │ notif.    │ requests │ resources│ feedback │ acad.info│ config.  │
+    │ 3001     │ 3002     │ 3003     │ 3004     │ 3005      │ 3006     │ 3007     │ 3008     │ 3009     │ 3010     │
    └──────────┴──────────┴──────────┴──────────┴───────────┴──────────┴──────────┴──────────┴──────────┴──────────┘
                                          │
                                          ▼
@@ -52,9 +52,9 @@ La plataforma se divide en dos aplicaciones independientes que se comunican por 
 | `notifications-service` | 3005 | Notificaciones |
 | `requests-service` | 3006 | Solicitudes |
 | `resources-service` | 3007 | Recursos |
-| `pqrs-service` | 3008 | PQRS (peticiones, quejas, reclamos) |
-| `info-academica-service` | 3009 | Información académica |
-| `configuracion-service` | 3010 | Configuración del sistema |
+| `feedback-service` | 3008 | Feedback (peticiones, quejas, reclamos) |
+| `academic-info-service` | 3009 | Información académica |
+| `configuration-service` | 3010 | Configuración del sistema |
 
 ### 2.2 Estructura de un microservicio
 
@@ -258,8 +258,8 @@ NOTIFICATIONS_SERVICE_PORT=3005
 REQUESTS_SERVICE_PORT=3006
 RESOURCES_SERVICE_PORT=3007
 PQRS_SERVICE_PORT=3008
-INFO_ACADEMICA_SERVICE_PORT=3009
-CONFIGURACION_SERVICE_PORT=3010
+ACADEMIC_INFO_SERVICE_PORT=3009
+CONFIGURATION_SERVICE_PORT=3010
 ```
 
 ---
