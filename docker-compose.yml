@@ -28,6 +28,66 @@ services:
 
 
   # =========================================================
+  # ELASTICSEARCH
+  # =========================================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
+    container_name: uajs-elasticsearch
+    restart: unless-stopped
+
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+
+    ports:
+      - "9200:9200"
+
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+
+  # =========================================================
+  # SEARCH SERVICE
+  # =========================================================
+  search-service:
+    build:
+      context: ./backend/services/search-service
+      dockerfile: Dockerfile
+
+    container_name: uajs-search-service
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ""
+      DB_NAME: uajs_smart_campus
+      ELASTICSEARCH_NODE: http://elasticsearch:9200
+      SEARCH_SERVICE_PORT: 3011
+      PORT: 3011
+
+    ports:
+      - "3011:3011"
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+
+  # =========================================================
   # API GATEWAY
   # =========================================================
   gateway:
@@ -383,4 +443,5 @@ services:
 # =========================================================
 volumes:
   mysql_data:
+  elasticsearch_data:
   frontend_node_modules:
