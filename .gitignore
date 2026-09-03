@@ -1,24 +1,55 @@
-# Dependencias
+# ============================================================
+# DEPENDENCIAS
+# ============================================================
 node_modules/
+**/node_modules/
+.jedis/
 
-# Variables de entorno
+# ============================================================
+# VARIABLES DE ENTORNO
+# ============================================================
 .env
+.env.*
+!.env.example
 .env.local
 .env.*.local
 *.local
 
-# Build
+# ============================================================
+# BUILD / SALIDAS DE COMPILACION
+# ============================================================
 dist/
 dist-ssr/
 build/
+coverage/
+*.tsbuildinfo
+.next/
+out/
 .vite/
+**/dist/
 
-# Cache
+# ============================================================
+# BASE DE DATOS / ARCHIVOS GENERADOS
+# ============================================================
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.log
+
+# ============================================================
+# CACHE
+# ============================================================
 .cache/
 .parcel-cache/
-coverage/
+.eslintcache
+.stylelintcache
+.temp/
 
-# Logs
+# ============================================================
+# LOGS
+# ============================================================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -26,21 +57,52 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# IDE
+# ============================================================
+# IDE / EDITORES
+# ============================================================
 .vscode/
 !.vscode/extensions.json
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 *.swp
 *.swo
+.project
+.settings/
+.classpath
+*.code-workspace
 
-# Sistema
+# ============================================================
+# SISTEMA OPERATIVO
+# ============================================================
 .DS_Store
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Archivos temporales
+# ============================================================
+# ARCHIVOS TEMPORALES
+# ============================================================
 *.tmp
 *.temp
 *.bak
+*.orig
 *~
+
+# ============================================================
+# DOCKER
+# ============================================================
+docker-compose.override.yml
+docker-compose.prod.yml
+*.override.yaml
+*.override.yml
+.DS_Store
+
+# ============================================================
+# DOCUMENTACION / ARCHIVOS DE TRABAJO
+# ============================================================
+docs/*.tmp
+*.md.tmp

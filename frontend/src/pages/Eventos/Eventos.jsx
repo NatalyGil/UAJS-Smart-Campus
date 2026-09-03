@@ -2,7 +2,7 @@ import { useState } from "react";
 import Icon from "../../components/Icon/Icon";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import useAuth from "../../context/useAuth";
-import eventos, { CATEGORIAS_EVENTO, ESTADOS_EVENTO } from "../../utils/eventos";
+import { CATEGORIAS_EVENTO, ESTADOS_EVENTO, MODALIDADES_EVENTO, obtenerEventos, guardarEventos } from "../../utils/eventos";
 import "./Eventos.css";
 
 const CATEGORIA_CLASE = {
@@ -18,6 +18,12 @@ const ESTADO_CLASE = {
     Cancelado: "canceled"
 };
 
+const MODALIDAD_CLASE = {
+    Presencial: "presencial",
+    Virtual: "virtual",
+    "Híbrido": "hibrido"
+};
+
 const formVacio = {
     nombre: "",
     fecha: "",
@@ -26,7 +32,9 @@ const formVacio = {
     categoria: "Académico",
     descripcion: "",
     cupo: 0,
-    estado: "Activo"
+    estado: "Activo",
+    ponente: "",
+    modalidad: "Presencial"
 };
 
 function formatearFecha(iso) {
@@ -52,10 +60,10 @@ function formatearHora(hora) {
 }
 
 function Eventos() {
-    const { user } = useAuth();
-    const esAdmin = user?.rol === "Administrador";
+    const [items, setItems] = useState(() => obtenerEventos());
+    const { user, puede } = useAuth();
+    const esAdmin = puede("publicar_eventos");
 
-    const [items, setItems] = useState(eventos);
     const [query, setQuery] = useState("");
     const [busqueda, setBusqueda] = useState("");
     const [categoria, setCategoria] = useState("");
@@ -134,7 +142,9 @@ function Eventos() {
             categoria: ev.categoria,
             descripcion: ev.descripcion,
             cupo: ev.cupo,
-            estado: ev.estado
+            estado: ev.estado,
+            ponente: ev.ponente || "",
+            modalidad: ev.modalidad || "Presencial"
         });
         setError("");
         setModalAbierto(true);
@@ -166,32 +176,33 @@ function Eventos() {
 
         if (editandoId === null) {
             const nuevo = { id: Date.now(), ...form, inscritos: 0 };
-            setItems([nuevo, ...items]);
+            const nueva = [nuevo, ...items];
+            setItems(nueva);
+            guardarEventos(nueva);
             mostrarAviso("Evento creado correctamente.");
         } else {
-            setItems(
-                items.map((item) =>
-                    item.id === editandoId ? { ...item, ...form } : item
-                )
-            );
+            const nueva = items.map((item) => (item.id === editandoId ? { ...item, ...form } : item));
+            setItems(nueva);
+            guardarEventos(nueva);
             mostrarAviso("Evento actualizado correctamente.");
         }
-
         setModalAbierto(false);
     };
 
     const eliminarEvento = (ev) => {
-        setItems(items.filter((item) => item.id !== ev.id));
+        const nueva = items.filter((item) => item.id !== ev.id);
+        setItems(nueva);
+        guardarEventos(nueva);
         setDetalleAbierto(null);
         mostrarAviso(`Evento "${ev.nombre}" eliminado.`);
     };
 
     const cambiarEstado = (ev, nuevoEstado) => {
-        setItems(
-            items.map((item) =>
-                item.id === ev.id ? { ...item, estado: nuevoEstado } : item
-            )
+        const nueva = items.map((item) =>
+            item.id === ev.id ? { ...item, estado: nuevoEstado } : item
         );
+        setItems(nueva);
+        guardarEventos(nueva);
         setDetalleAbierto({ ...ev, estado: nuevoEstado });
         mostrarAviso(`Estado del evento actualizado a "${nuevoEstado}".`);
     };
@@ -201,14 +212,16 @@ function Eventos() {
             mostrarAviso("El evento ya alcanzó su cupo máximo.");
             return;
         }
-        setItems(
-            items.map((item) =>
-                item.id === ev.id
-                    ? { ...item, inscritos: item.inscritos + 1 }
-                    : item
-            )
+        const nueva = items.map((item) =>
+            item.id === ev.id ? { ...item, inscritos: item.inscritos + 1 } : item
         );
-        setDetalleAbierto({ ...ev, inscritos: ev.inscritos + 1 });
+        setItems(nueva);
+        guardarEventos(nueva);
+        setDetalleAbierto((prev) =>
+            prev && prev.id === ev.id
+                ? { ...prev, inscritos: prev.inscritos + 1 }
+                : prev
+        );
         mostrarAviso("Te has inscrito al evento.");
     };
 
@@ -224,15 +237,14 @@ function Eventos() {
         : null;
 
     return (
-        <div className="eventos">
-            <div className="eventos__page-header">
-                <div className="eventos__page-title">
-                    <h1>Eventos</h1>
+        <div className="page">
+            <div className="page__header">
+                <div className="page__title">
                     <p>Conferencias, talleres y actividades de la UAJS.</p>
                 </div>
 
                 {esAdmin && (
-                    <button className="eventos__new-button" onClick={abrirNuevo}>
+                    <button className="button button--accent button--md" onClick={abrirNuevo}>
                         <Icon name="eventos" size={15} />
                         Nuevo evento
                     </button>
@@ -240,27 +252,27 @@ function Eventos() {
             </div>
 
             {aviso && (
-                <div className="eventos__toast">
+                <div className="toast toast--success">
                     <Icon name="info" size={14} />
                     {aviso}
                 </div>
             )}
 
-            <div className="eventos__summary">
+            <div className="summary">
                 <button
                     className={
                         categoria === ""
-                            ? "eventos__summary-card eventos__summary-card--active"
-                            : "eventos__summary-card"
+                            ? "summary__card summary__card--active"
+                            : "summary__card"
                     }
                     onClick={() => setCategoria("")}
                 >
-                    <div className="eventos__summary-icon eventos__summary-icon--all">
+                    <div className="summary__icon eventos__summary-icon--all">
                         <Icon name="eventos" size={19} />
                     </div>
                     <div>
-                        <div className="eventos__summary-label">Todos</div>
-                        <div className="eventos__summary-number">{items.length}</div>
+                        <div className="summary__number">{items.length}</div>
+                        <div className="summary__label">Todos</div>
                     </div>
                 </button>
 
@@ -269,31 +281,27 @@ function Eventos() {
                         key={cat}
                         className={
                             categoria === cat
-                                ? "eventos__summary-card eventos__summary-card--active"
-                                : "eventos__summary-card"
+                                ? "summary__card summary__card--active"
+                                : "summary__card"
                         }
-                        onClick={() =>
-                            setCategoria(categoria === cat ? "" : cat)
-                        }
+                        onClick={() => setCategoria(cat)}
                     >
-                        <div
-                            className={`eventos__summary-icon eventos__summary-icon--${CATEGORIA_CLASE[cat] || "blue"}`}
-                        >
+                        <div className={`summary__icon eventos__summary-icon--${CATEGORIA_CLASE[cat] || "blue"}`}>
                             <Icon name="eventos" size={19} />
                         </div>
                         <div>
-                            <div className="eventos__summary-label">{cat}</div>
-                            <div className="eventos__summary-number">
-                                {contarCategoria(cat)}
+                            <div className="summary__number">
+                                {items.filter((e) => e.categoria === cat).length}
                             </div>
+                            <div className="summary__label">{cat}</div>
                         </div>
                     </button>
                 ))}
             </div>
 
-            <div className="eventos__filter-card">
-                <div className="eventos__filters">
-                    <div className="eventos__filter-group eventos__filter-group--search">
+            <div className="filters">
+                <div className="filters__grid">
+                    <div className="filters__group filters__group--search">
                         <label htmlFor="eventos-search">Buscar</label>
                         <SearchBar
                             id="eventos-search"
@@ -305,24 +313,7 @@ function Eventos() {
                         />
                     </div>
 
-                    <div className="eventos__filter-group">
-                        <label htmlFor="eventos-categoria">Categoría</label>
-                        <select
-                            id="eventos-categoria"
-                            className="eventos__filter-select"
-                            value={categoria}
-                            onChange={(e) => setCategoria(e.target.value)}
-                        >
-                            <option value="">Todas</option>
-                            {CATEGORIAS_EVENTO.map((cat) => (
-                                <option key={cat} value={cat}>
-                                    {cat}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="eventos__filter-group">
+                    <div className="filters__group">
                         <label htmlFor="eventos-estado">Estado</label>
                         <select
                             id="eventos-estado"
@@ -339,7 +330,7 @@ function Eventos() {
                         </select>
                     </div>
 
-                    <div className="eventos__filter-group">
+                    <div className="filters__group">
                         <label htmlFor="eventos-orden">Ordenar por</label>
                         <select
                             id="eventos-orden"
@@ -355,13 +346,15 @@ function Eventos() {
                 </div>
             </div>
 
-            <div className="eventos__list-header">
-                <h2>Actividades programadas</h2>
-                <span>{encontrados.length} eventos</span>
+            <div className="list-header">
+                <h2>Eventos disponibles</h2>
+                <span className="list-header__meta">
+                    {encontrados.length} evento(s) encontrado(s)
+                </span>
             </div>
 
             {encontrados.length === 0 ? (
-                <div className="eventos__empty">
+                <div className="empty">
                     No se encontraron eventos con los filtros aplicados.
                 </div>
             ) : (
@@ -370,7 +363,7 @@ function Eventos() {
                         <article className="eventos__item" key={ev.id}>
                             <div className="eventos__item-top">
                                 <span
-                                    className={`eventos__item-badge ${CATEGORIA_CLASE[ev.categoria] || "blue"}`}
+                                    className={`badge badge--${CATEGORIA_CLASE[ev.categoria] || "blue"}`}
                                 >
                                     {ev.categoria}
                                 </span>
@@ -378,6 +371,11 @@ function Eventos() {
                                     className={`eventos__item-state eventos__item-state--${ESTADO_CLASE[ev.estado] || "active"}`}
                                 >
                                     {ev.estado}
+                                </span>
+                                <span
+                                    className={`eventos__item-modalidad eventos__item-modalidad--${MODALIDAD_CLASE[ev.modalidad] || "presencial"}`}
+                                >
+                                    {ev.modalidad}
                                 </span>
                             </div>
 
@@ -397,6 +395,12 @@ function Eventos() {
                                     <Icon name="recursos" size={12} />
                                     {ev.lugar}
                                 </span>
+                                {ev.ponente && (
+                                    <span className="eventos__meta-line">
+                                        <Icon name="perfil" size={12} />
+                                        {ev.ponente}
+                                    </span>
+                                )}
                             </div>
 
                             <div className="eventos__item-footer">
@@ -415,12 +419,31 @@ function Eventos() {
                                     </span>
                                 </div>
 
-                                <button
-                                    className="eventos__view-button"
-                                    onClick={() => verDetalle(ev)}
-                                >
-                                    Ver
-                                </button>
+                                <div className="eventos__item-actions">
+                                    {!esAdmin && (
+                                        <button
+                                            className="eventos__inscribir-button"
+                                            onClick={() => inscribirse(ev)}
+                                            disabled={
+                                                ev.estado !== "Activo" ||
+                                                cuposDisponibles(ev) === 0
+                                            }
+                                        >
+                                            {ev.estado !== "Activo"
+                                                ? "No disponible"
+                                                : cuposDisponibles(ev) === 0
+                                                    ? "Cupo agotado"
+                                                    : "Inscribirme"}
+                                        </button>
+                                    )}
+
+                                    <button
+                                        className="eventos__view-button"
+                                        onClick={() => verDetalle(ev)}
+                                    >
+                                        Ver
+                                    </button>
+                                </div>
                             </div>
                         </article>
                     ))}
@@ -499,6 +522,36 @@ function Eventos() {
                                     onChange={handleChange}
                                     placeholder="ej. Auditorio principal"
                                 />
+                            </div>
+
+                            <div className="eventos__form-grid">
+                                <div className="eventos__form-group">
+                                    <label htmlFor="ev-ponente">Ponente / organizador</label>
+                                    <input
+                                        id="ev-ponente"
+                                        type="text"
+                                        name="ponente"
+                                        value={form.ponente}
+                                        onChange={handleChange}
+                                        placeholder="ej. Dra. Carolina Ruiz"
+                                    />
+                                </div>
+
+                                <div className="eventos__form-group">
+                                    <label htmlFor="ev-modalidad">Modalidad</label>
+                                    <select
+                                        id="ev-modalidad"
+                                        name="modalidad"
+                                        value={form.modalidad}
+                                        onChange={handleChange}
+                                    >
+                                        {MODALIDADES_EVENTO.map((mod) => (
+                                            <option key={mod} value={mod}>
+                                                {mod}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             <div className="eventos__form-grid">
@@ -602,7 +655,7 @@ function Eventos() {
                         <div className="eventos__detail-header">
                             <div className="eventos__detail-title">
                                 <span
-                                    className={`eventos__item-badge ${CATEGORIA_CLASE[detalle.categoria] || "blue"}`}
+                                    className={`badge badge--${CATEGORIA_CLASE[detalle.categoria] || "blue"}`}
                                 >
                                     {detalle.categoria}
                                 </span>
@@ -610,6 +663,11 @@ function Eventos() {
                                     className={`eventos__item-state eventos__item-state--${ESTADO_CLASE[detalle.estado] || "active"}`}
                                 >
                                     {detalle.estado}
+                                </span>
+                                <span
+                                    className={`eventos__item-modalidad eventos__item-modalidad--${MODALIDAD_CLASE[detalle.modalidad] || "presencial"}`}
+                                >
+                                    {detalle.modalidad}
                                 </span>
                             </div>
                             <button
@@ -635,6 +693,10 @@ function Eventos() {
                             <div className="eventos__detail-item">
                                 <Icon name="recursos" size={14} />
                                 <span>{detalle.lugar}</span>
+                            </div>
+                            <div className="eventos__detail-item">
+                                <Icon name="perfil" size={14} />
+                                <span>{detalle.ponente || "Por definir"}</span>
                             </div>
                         </div>
 
@@ -694,8 +756,8 @@ function Eventos() {
                                 {detalle.estado !== "Activo"
                                     ? `No disponible (${detalle.estado})`
                                     : cuposDisponibles(detalle) === 0
-                                      ? "Cupo agotado"
-                                      : "Inscribirme"}
+                                        ? "Cupo agotado"
+                                        : "Inscribirme"}
                             </button>
                         )}
                     </div>
