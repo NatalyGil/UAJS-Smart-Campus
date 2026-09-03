@@ -78,32 +78,7 @@ const SOLICITUDES_BASE = [
     {
         id: "SOL-2026-001",
         tipo: "Reserva de auditorio",
-        servicio: "Reservas",
-        prioridad: "Media",
-        fecha: "2026-09-01",
-        estado: "EN_PROCESO",
-        usuario: { id: 25, nombre: "Natalia Rodríguez" },
-        responsable: { id: 4, nombre: "Carlos Pérez" },
-        dependencia: "Bienestar Universitario",
-        descripcion: "Reserva del auditorio principal para la cátedra de inteligencia artificial aplicada.",
-        historial: [
-            { id: 1, tipo: "CREACION", fecha: "2026-09-01 09:00", usuario: "Natalia Rodríguez", descripcion: "Solicitud registrada." },
-            { id: 2, tipo: "ESTADO", estado: "EN_REVISION", fecha: "2026-09-01 09:15", usuario: "Carlos Pérez", descripcion: "Verificación de disponibilidad y logística del espacio." },
-            { id: 3, tipo: "ASIGNACION", responsable: "Carlos Pérez", fecha: "2026-09-02 10:30", usuario: "Carlos Pérez", descripcion: "Auditorio principal asignado como responsable." },
-            { id: 4, tipo: "ESTADO", estado: "EN_PROCESO", fecha: "2026-09-02 11:05", usuario: "Carlos Pérez", descripcion: "Se está confirmando agenda y recursos audiovisuales." }
-        ]
-    },
-    {
-        id: "SOL-2026-002",
-        tipo: "Constancia académica",
-        servicio: "Solicitudes",
-        prioridad: "Alta",
-        fecha: "2026-09-02",
-        estado: "EN_REVISION",
-        usuario: { id: 26, nombre: "Carlos Méndez" },
-        responsable: null,
-        dependencia: "Registro y Control",
-        descripcion: "Solicitud de constancia de notas para trámites administrativos del semestre actual.",
+
         historial: [
             { id: 1, tipo: "CREACION", fecha: "2026-09-02 08:20", usuario: "Carlos Méndez", descripcion: "Solicitud registrada." },
             { id: 2, tipo: "NOTA", fecha: "2026-09-02 09:00", usuario: "Carlos Pérez", descripcion: "Se solicita documento de identidad adicional." }

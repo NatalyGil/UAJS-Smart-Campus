@@ -53,7 +53,7 @@ const PRIORIDADES = ["Alta", "Media", "Baja"];
 
 const formVacio = {
     tipo: "",
-    servicio: "",
+    dependencia: "",
     descripcion: "",
     prioridad: "Media"
 };
@@ -87,16 +87,7 @@ function Solicitudes() {
     const puedeGestionar = puede("actualizar_estados") || puede("gestionar_solicitudes");
     const puedeRegistrar = puede("registrar_solicitudes");
 
-    const responsables = useMemo(
-        () =>
-            obtenerUsuarios()
-                .filter(
-                    (u) =>
-                        (u.rol === "Administrador" || u.rol === "Administrativo") &&
-                        u.estado === "Activo"
-                )
-                .map((u) => ({ id: u.id, nombre: u.nombre })),
-        []
+
     );
 
     const encontradas = useMemo(() => {
@@ -393,167 +384,7 @@ function Solicitudes() {
                 )}
             </div>
 
-            {aviso && (
-                <div className="toast toast--success">
-                    <Icon name="info" size={14} />
-                    {aviso}
-                </div>
-            )}
 
-            {/* ── SUMMARY ── */}
-            <div className="summary">
-                <button
-                    className={
-                        estado === "" && prioridad === ""
-                            ? "summary__card summary__card--active"
-                            : "summary__card"
-                    }
-                    onClick={() => {
-                        cambiarEstado("");
-                        cambiarPrioridad("");
-                    }}
-                >
-                    <div className="summary__icon sols__summary-icon--all">
-                        <Icon name="solicitudes" size={19} />
-                    </div>
-                    <div>
-                        <div className="summary__number">{items.length}</div>
-                        <div className="summary__label">Todos</div>
-                    </div>
-                </button>
-
-                {ESTADOS_SOLICITUD.map((estadoItem) => (
-                    <button
-                        key={estadoItem}
-                        className={
-                            estado === estadoItem
-                                ? "summary__card summary__card--active"
-                                : "summary__card"
-                        }
-                        onClick={() => {
-                            cambiarEstado(
-                                estado === estadoItem ? "" : estadoItem
-                            );
-                            setPrioridad("");
-                        }}
-                    >
-                        <div
-                            className={`summary__icon sols__summary-icon--${ESTADO_COLOR[estadoItem] || "gray"}`}
-                        >
-                            <Icon name="solicitudes" size={19} />
-                        </div>
-                        <div>
-                            <div className="summary__number">
-                                {items.filter((i) => i.estado === estadoItem)
-                                    .length}
-                            </div>
-                            <div className="summary__label">
-                                {ETIQUETA_ESTADO[estadoItem]}
-                            </div>
-                        </div>
-                    </button>
-                ))}
-
-                {PRIORIDADES.map((p) => (
-                    <button
-                        key={p}
-                        className={
-                            prioridad === p
-                                ? "summary__card summary__card--active"
-                                : "summary__card"
-                        }
-                        onClick={() => {
-                            cambiarPrioridad(prioridad === p ? "" : p);
-                            setEstado("");
-                        }}
-                    >
-                        <div
-                            className={`summary__icon sols__summary-icon--${PRIORIDAD_SUMMARY_CLASE[p]}`}
-                        >
-                            <Icon name="solicitudes" size={19} />
-                        </div>
-                        <div>
-                            <div className="summary__number">
-                                {items.filter((i) => i.prioridad === p).length}
-                            </div>
-                            <div className="summary__label">P: {p}</div>
-                        </div>
-                    </button>
-                ))}
-            </div>
-
-            {/* ── FILTROS ── */}
-            <div className="filters">
-                <div className="filters__grid">
-                    <div className="filters__group filters__group--search">
-                        <label htmlFor="sols-search">Buscar</label>
-                        <SearchBar
-                            id="sols-search"
-                            placeholder="Número, tipo, servicio, solicitante…"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            onSearch={() => setBusqueda(query)}
-                            suggestions={sugerencias}
-                        />
-                    </div>
-
-                    <div className="filters__group">
-                        <label htmlFor="sols-estado">Estado</label>
-                        <select
-                            id="sols-estado"
-                            className="sols__filter-select"
-                            value={estado}
-                            onChange={(e) => cambiarEstado(e.target.value)}
-                        >
-                            <option value="">Todos los estados</option>
-                            {ESTADOS_SOLICITUD.map((e) => (
-                                <option key={e} value={e}>
-                                    {ETIQUETA_ESTADO[e]}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="filters__group">
-                        <label htmlFor="sols-prioridad">Prioridad</label>
-                        <select
-                            id="sols-prioridad"
-                            className="sols__filter-select"
-                            value={prioridad}
-                            onChange={(e) => cambiarPrioridad(e.target.value)}
-                        >
-                            <option value="">Todas</option>
-                            {PRIORIDADES.map((p) => (
-                                <option key={p} value={p}>
-                                    {p}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            {/* ── HEADER Y PAGINACIÓN ── */}
-            {encontradas.length > 0 && (
-                <div className="list-header">
-                    <h2>Mis solicitudes</h2>
-                    <span className="list-header__meta">
-                        {desde}–{hasta} de {encontradas.length} registros
-                    </span>
-                </div>
-            )}
-
-            {itemsPagina.length === 0 ? (
-                <div className="empty">
-                    No se encontraron solicitudes con los filtros aplicados.
-                </div>
-            ) : (
-                <>
-                    <div className="sols__list">
-                        {itemsPagina.map((item) => (
-                            <article className="sols__item" key={item.id}>
-                                <div
-                                    className={`sols__item-icon sols__item-icon--${SERVICIO_CLASE[item.servicio] || "blue"}`}
                                 >
                                     <Icon
                                         name={
@@ -710,29 +541,7 @@ function Solicitudes() {
                             )}
                         </div>
 
-                        <div className="sols__form-group">
-                            <label htmlFor="sol-servicio">Servicio *</label>
-                            <select
-                                id="sol-servicio"
-                                name="servicio"
-                                value={form.servicio}
-                                onChange={handleChange}
-                                className={formErrores.servicio ? "sols__input--error" : ""}
-                            >
-                                <option value="">Selecciona…</option>
-                                <option value="Solicitudes">
-                                    Solicitudes
-                                </option>
-                                <option value="Reservas">Reservas</option>
-                                <option value="Eventos">Eventos</option>
-                                <option value="Recursos">Recursos</option>
-                                <option value="PQRS">PQRS</option>
-                            </select>
-                            {formErrores.servicio && (
-                                <span className="sols__field-error">{formErrores.servicio}</span>
-                            )}
-                        </div>
-                    </div>
+
 
                     <div className="form-grid">
                         <div className="sols__form-group">
@@ -925,52 +734,6 @@ function Solicitudes() {
                         />
                     </div>
 
-                    <div className="modal__footer">
-                        <button
-                            type="button"
-                            className="button button--ghost button--md"
-                            onClick={cerrarNota}
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            className="button button--accent button--md"
-                            disabled={!nota.trim()}
-                        >
-                            Agregar nota
-                        </button>
-                    </div>
-                </form>
-            </Modal>
-
-            {/* ── Modal: confirmar acción (Resolver / Cerrar) ── */}
-            <Modal
-                isOpen={confirmarAbierto}
-                title={
-                    accionPendiente?.accion === "cerrar"
-                        ? "Cerrar solicitud"
-                        : "Resolver solicitud"
-                }
-                subtitle={
-                    accionPendiente?.accion === "cerrar"
-                        ? "Esta acción marcará la solicitud como cerrada de forma definitiva."
-                        : "Esta acción marcará la solicitud como resuelta."
-                }
-                onClose={() => { setConfirmarAbierto(false); setAccionPendiente(null); }}
-            >
-                <p className="sols__modal-confirm-text">
-                    ¿Confirmas que deseas{" "}
-                    <strong>
-                        {accionPendiente?.accion === "cerrar" ? "cerrar" : "resolver"}
-                    </strong>{" "}
-                    la solicitud <strong>{accionPendiente?.item?.id}</strong>?
-                </p>
-                <div className="modal__footer">
-                    <button
-                        type="button"
-                        className="button button--ghost button--md"
-                        onClick={() => { setConfirmarAbierto(false); setAccionPendiente(null); }}
                     >
                         Cancelar
                     </button>
