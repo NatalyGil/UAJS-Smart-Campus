@@ -106,3 +106,4 @@ docker-compose.prod.yml
 # ============================================================
 docs/*.tmp
 *.md.tmp
+LOGINS_USUARIOS.md
