@@ -6,7 +6,6 @@ import useAuth from "../../context/useAuth";
 import { useTheme } from "../../context/ThemeContext";
 import { getAvatarStyle, getUserInitials, getUserPhoto } from "../../utils/avatar";
 import Icon from "../Icon/Icon";
-import FontSizeToggle from "../FontSizeToggle/FontSizeToggle";
 import "./Navbar.css";
 
 function Navbar({ onToggle }) {
@@ -94,8 +93,6 @@ function Navbar({ onToggle }) {
             </div>
 
             <div className="navbar__right">
-                <FontSizeToggle />
-
                 <Link to="/notificaciones" className="navbar__notification">
                     <Icon name="notificaciones" size={20} />
                     {noLeidas > 0 && (

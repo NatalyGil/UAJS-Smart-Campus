@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import useAuth from "../../context/useAuth";
 import { useTheme } from "../../context/ThemeContext";
+import useFontSize from "../../hooks/useFontSize";
 import Icon from "../../components/Icon/Icon";
 import {
     getPhotoByUserId,
@@ -145,6 +146,7 @@ function normalizarConfiguracion(base, extra) {
 function Configuracion() {
     const { user, logout, updateUser } = useAuth();
     const { tema, setTema } = useTheme();
+    const { levels, level, setLevel } = useFontSize();
 
     const [config, setConfig] = useState(() => {
         try {
@@ -765,21 +767,21 @@ function Configuracion() {
                             </div>
 
                             <div className="config__themes">
-                                {temas.map((tema) => (
+                                {temas.map((opcion) => (
                                     <button
-                                        key={tema.valor}
+                                        key={opcion.valor}
                                         type="button"
                                         className={
-                                            tema === tema.valor
+                                            tema === opcion.valor
                                                 ? "config__theme config__theme--active"
                                                 : "config__theme"
                                         }
-                                        onClick={() => aplicarTema(tema.valor)}
+                                        onClick={() => aplicarTema(opcion.valor)}
                                     >
                                         <span className="config__theme-icon">
-                                            <Icon name={tema.icono} size={20} />
+                                            <Icon name={opcion.icono} size={20} />
                                         </span>
-                                        <span className="config__theme-label">{tema.etiqueta}</span>
+                                        <span className="config__theme-label">{opcion.etiqueta}</span>
                                     </button>
                                 ))}
                             </div>
@@ -789,6 +791,37 @@ function Configuracion() {
                                 operativo. <strong>Claro</strong> u <strong>Oscuro</strong> aplican
                                 el tema de forma permanente independientemente del SO.
                             </p>
+
+                            <div className="config__card-divider" />
+
+                            <div className="config__card-header">
+                                <div className="config__card-header-icon">
+                                    <Icon name="servicios" size={17} />
+                                </div>
+                                <div>
+                                    <h2>Tamaño de fuente</h2>
+                                    <p>Ajusta el tamaño del texto de la aplicación.</p>
+                                </div>
+                            </div>
+
+                            <div className="config__fontsize" role="group" aria-label="Tamaño de fuente">
+                                {levels.map((opcion) => (
+                                    <button
+                                        key={opcion.id}
+                                        type="button"
+                                        className={
+                                            opcion.id === level.id
+                                                ? "config__fontsize-btn config__fontsize-btn--active"
+                                                : "config__fontsize-btn"
+                                        }
+                                        aria-pressed={opcion.id === level.id}
+                                        onClick={() => setLevel(opcion)}
+                                    >
+                                        {opcion.label}
+                                        <span>{opcion.px}px</span>
+                                    </button>
+                                ))}
+                            </div>
                         </section>
                     )}
 
