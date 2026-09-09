@@ -811,3 +811,18 @@
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 440px) {
+    .reservas__calendar {
+        margin: 0 calc(-1 * var(--space-2));
+    }
+
+    .reservas__reservation-actions {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .reservas__form-row {
+        grid-template-columns: 1fr;
+    }
+}
