@@ -296,6 +296,38 @@
     }
 }
 
+@media (max-width: 480px) {
+    .users__filter-select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .users__item {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .users__item-actions {
+        gap: 8px;
+    }
+
+    .users__edit-button,
+    .users__deactivate-button,
+    .users__activate-button {
+        min-height: 44px;
+        flex: 1;
+    }
+
+    .users__password-toggle {
+        min-height: 40px;
+        min-width: 44px;
+    }
+
+    .users__password-wrap input {
+        padding-right: 68px;
+    }
+}
+
 
 /* Hint de password en el modal */
 .users__password-hint {

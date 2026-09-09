@@ -5,10 +5,11 @@
 
 .login {
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     display: grid;
     grid-template-columns: 1.1fr 0.9fr;
-    background: #f5f8fc;
+    background: var(--color-surface-elevated);
     color: var(--color-text);
 }
 
@@ -515,57 +516,175 @@
     .login {
         height: auto;
         min-height: 100vh;
+        min-height: 100dvh;
         overflow: visible;
         grid-template-columns: 1fr;
     }
 
     .login__aside {
-        min-height: 52vh;
-        padding: 50px 32px;
+        min-height: auto;
+        padding: 54px 32px 40px;
+    }
+
+    .login__aside-inner {
+        max-width: none;
+        align-items: center;
+        text-align: center;
+    }
+
+    .login__logo {
+        margin-bottom: 16px;
     }
 
     .login__title {
-        font-size: 48px;
+        font-size: clamp(34px, 8vw, 46px);
+        margin-bottom: 14px;
+    }
+
+    .login__desc {
+        margin: 0 auto 20px;
+        font-size: 14px;
+        max-width: 440px;
+    }
+
+    .login__features {
+        justify-content: center;
     }
 
     .login__panel {
-        padding: 35px 24px;
+        padding: 32px 24px;
     }
 }
 
-@media (max-width: 480px) {
+/* Teléfonos */
+@media (max-width: 600px) {
     .login__aside {
-        min-height: 55vh;
-        padding: 40px 28px;
+        padding: 26px 22px 22px;
+        border-radius: 0 0 26px 26px;
+    }
+
+    .login__logo {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 8px;
+    }
+
+    .login__tag {
+        font-size: 9px;
+        letter-spacing: 1.6px;
+        margin-bottom: 8px;
     }
 
     .login__title {
-        font-size: 40px;
+        font-size: clamp(22px, 7vw, 25px);
+        letter-spacing: -0.5px;
+        margin-bottom: 0;
     }
 
+    .login__title span {
+        display: inline;
+    }
+
+    .login__desc,
     .login__features {
         display: none;
     }
 
     .login__panel {
-        padding: 24px 16px;
+        padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
     }
 
     .login__card {
-        padding: 28px;
+        padding: 24px 20px;
+        border-radius: 18px;
     }
 
     .login__heading {
-        font-size: 22px;
+        font-size: 21px;
+    }
+
+    /* 16px evita el zoom automático de iOS al enfocar el input */
+    .login__field input {
+        font-size: 16px;
+    }
+
+    .login__form {
+        gap: 14px;
+    }
+
+    .login__submit {
+        padding: 13px 16px;
+    }
+
+    .login__creds {
+        margin-top: 20px;
+        padding-top: 16px;
     }
 
     .login__creds-grid {
         grid-template-columns: 1fr;
+        gap: 8px;
     }
 
     .login__actions {
         flex-direction: column;
         gap: 10px;
         align-items: flex-start;
+    }
+}
+
+/* Teléfonos muy angostos */
+@media (max-width: 360px) {
+    .login__title {
+        font-size: 21px;
+    }
+
+    .login__card {
+        padding: 20px 16px;
+    }
+}
+
+/* Pantallas cortas en horizontal (teléfono en landscape) */
+@media (max-height: 520px) and (orientation: landscape) {
+    .login {
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: visible;
+    }
+
+    .login__aside {
+        padding: 20px 24px;
+    }
+
+    .login__particles,
+    .login__orb--tr,
+    .login__orb--bl,
+    .login__desc,
+    .login__features {
+        display: none;
+    }
+
+    .login__logo {
+        width: 52px;
+        height: 52px;
+        margin-bottom: 4px;
+    }
+
+    .login__title {
+        font-size: 22px;
+        margin-bottom: 0;
+    }
+
+    .login__creds {
+        display: none;
+    }
+
+    .login__panel {
+        padding: 16px;
+    }
+
+    .login__card {
+        padding: 20px;
     }
 }

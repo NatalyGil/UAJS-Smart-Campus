@@ -801,10 +801,22 @@
     .reservas__reservation {
         align-items: flex-start;
         flex-wrap: wrap;
+        padding: 14px 16px;
     }
 
     .reservas__reservation-actions {
-        margin-left: 60px;
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .reservas__action-button {
+        width: 40px;
+        height: 40px;
+    }
+
+    .reservas__reservations-card {
+        padding: 16px;
     }
 
     .reservas__form-row {
@@ -812,17 +824,23 @@
     }
 }
 
+@media (max-width: 480px) {
+    .reservas__filters-card {
+        padding: 14px;
+    }
+
+    .reservas__calendar-day {
+        min-height: 80px;
+        padding: 8px;
+    }
+
+    .reservas__reservation-details {
+        gap: 8px;
+    }
+}
+
 @media (max-width: 440px) {
     .reservas__calendar {
         margin: 0 calc(-1 * var(--space-2));
-    }
-
-    .reservas__reservation-actions {
-        margin-left: 0;
-        width: 100%;
-    }
-
-    .reservas__form-row {
-        grid-template-columns: 1fr;
     }
 }
