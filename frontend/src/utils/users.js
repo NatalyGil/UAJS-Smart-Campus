@@ -1,3 +1,14 @@
+export const ROL_IDS = {
+    Administrador: 1,
+    Docente: 2,
+    Estudiante: 3,
+    Egresado: 4,
+    Funcionario: 5,
+    Administrativo: 6,
+    Proveedor: 7,
+    Visitante: 8
+};
+
 export const ROLES = [
     {
         nombre: "Administrador",

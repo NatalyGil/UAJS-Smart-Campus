@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AuthContext } from "./auth-context";
-import { permisosDeRol, accionesDeRol, obtenerUsuarios } from "../utils/users";
+import { permisosDeRol, accionesDeRol } from "../utils/users";
+import { authApi } from "../utils/api";
 import Modal from "../components/Modal/Modal";
 import "../components/Modal/Modal.css";
 import "./session-warning.css";
@@ -34,25 +35,57 @@ function AuthProvider({ children }) {
 
     const login = async (identificacion, password) => {
         try {
-            const usuario = obtenerUsuarios().find(
-                (u) =>
-                    (u.cedula === identificacion ||
-                        u.usuario === identificacion) &&
-                    u.password === password
-            );
+const login = async (identificacion, password) => {
+    try {
+        const data = await authApi.login(identificacion, password);
 
-            if (!usuario) {
-                throw new Error("Credenciales inválidas");
-            }
+        const sesion = {
+            id: data.id_usuario,
+            usuario: data.usuario || data.identificacion,
+            nombre:
+                [data.nombre, data.apellido]
+                    .filter(Boolean)
+                    .join(" ")
+                    .trim() ||
+                data.nombre ||
+                data.usuario ||
+                "Usuario",
+            correo: data.correo || "",
+            rol: data.rol || data.tipo_usuario || "Estudiante",
+            programa: data.programa || "No especificado",
+            token: data.token,
+        };
+
+        setUser(sesion);
+
+        localStorage.setItem(
+            SESSION_KEY,
+            JSON.stringify(sesion)
+        );
+
+        return {
+            ok: true,
+            user: sesion,
+        };
+    } catch (err) {
+        console.error(err);
+
+        return {
+            ok: false,
+            mensaje: err.message || "No se pudo iniciar sesión.",
+        };
+    }
+};
 
             const sesion = {
-                id: usuario.id,
-                usuario: usuario.usuario,
-                nombre: usuario.nombre || "Usuario",
-                correo: usuario.correo || "",
-                rol: usuario.rol,
-                programa: usuario.programa || "No especificado",
-                token: "mock-token-" + btoa(usuario.usuario),
+                id: data.id_usuario,
+                usuario: data.usuario || data.identificacion,
+                nombre: [data.nombre, data.apellido].filter(Boolean).join(" ").trim()
+                    || data.nombre || data.usuario || "Usuario",
+                correo: data.correo || "",
+                rol: data.rol || data.tipo_usuario || "Estudiante",
+                programa: data.programa || "No especificado",
+                token: data.token
             };
 
             setUser(sesion);

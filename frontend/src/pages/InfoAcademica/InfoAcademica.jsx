@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useAuth from "../../context/useAuth";
+import useToast from "../../context/ToastContext";
 import Icon from "../../components/Icon/Icon";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
@@ -9,33 +10,45 @@ import {
     CATEGORIA_CLASE,
     ESTADO_CLASE,
     PROGRAMAS,
-    formVacio,
-    obtenerPublicaciones,
-    guardarPublicaciones,
-    aplicarVencimiento
+    formVacio
 } from "../../utils/infoAcademica";
+import { academicInfoApi } from "../../utils/api";
 import "./InfoAcademica.css";
 
 const HOY = new Date().toISOString().slice(0, 10);
 
 function InfoAcademica() {
     const { user, puede } = useAuth();
+    const toast = useToast();
     const puedePublicar = puede("publicar_info_academica");
 
     const [query,        setQuery]        = useState("");
     const [busqueda,     setBusqueda]     = useState("");
     const [categoria,    setCategoria]    = useState("");
-    const [items,        setItems]        = useState(() => {
-        // Al cargar: transitar Aprobada → Vencida si la fecha de vigencia ya pasó
-        const { lista, huboCambios } = aplicarVencimiento(obtenerPublicaciones());
-        if (huboCambios) guardarPublicaciones(lista);
-        return lista;
-    });
+    const [items,        setItems]        = useState([]);
+    const [cargando,     setCargando]     = useState(true);
     const [crearAbierto, setCrearAbierto] = useState(false);
     const [confirm,       setConfirm]      = useState(null);
     const [form,          setForm]         = useState(formVacio);
     const [errores,      setErrores]      = useState({});
     const [aviso,        setAviso]        = useState("");
+
+    const cargar = async () => {
+        setCargando(true);
+        try {
+            const data = await academicInfoApi.list();
+            setItems(Array.isArray(data) ? data : []);
+        } catch (err) {
+            toast.error(err.message || "No se pudieron cargar las publicaciones.");
+            setItems([]);
+        } finally {
+            setCargando(false);
+        }
+    };
+
+    useEffect(() => {
+        cargar();
+    }, []);
 
     // ── Helpers ──────────────────────────────────────────────
     const mostrarAviso = (msg) => {
@@ -107,42 +120,75 @@ function InfoAcademica() {
         return Object.keys(err).length === 0;
     };
 
-    const handleCrear = (e) => {
+    const handleCrear = async (e) => {
         e.preventDefault();
         if (!validar()) return;
 
-        const nueva = {
-            id: Date.now(),
-            fecha: HOY,
-            autor: user?.nombre ?? "Usuario",
-            estado: "Pendiente",
-            ...form,
-            vigencia: form.tipoVigencia === "Hasta" ? form.vigencia : ""
-        };
-
-        const actualizadas = [nueva, ...items];
-        setItems(actualizadas);
-        guardarPublicaciones(actualizadas);
-        setCrearAbierto(false);
-        setForm(formVacio);
-        setErrores({});
-        mostrarAviso("Publicación creada correctamente.");
+        try {
+            await academicInfoApi.create({
+                titulo: form.titulo,
+                categoria: form.categoria,
+                fecha: HOY,
+                autor: user?.nombre ?? "Usuario",
+                contenido: form.contenido,
+                estado: "Pendiente",
+                id_usuario: user?.id ?? null
+            });
+            await cargar();
+            setCrearAbierto(false);
+            setForm(formVacio);
+            setErrores({});
+            mostrarAviso("Publicación creada correctamente.");
+        } catch (err) {
+            toast.error(err.message || "No se pudo crear la publicación.");
+        }
     };
 
-    const cambiarEstado = (id, nuevoEstado) => {
-        const actualizadas = items.map((i) =>
-            i.id === id ? { ...i, estado: nuevoEstado } : i
-        );
-        setItems(actualizadas);
-        guardarPublicaciones(actualizadas);
-        mostrarAviso(`Publicación ${nuevoEstado.toLowerCase()}.`);
+    const cambiarEstado = async (id, nuevoEstado) => {
+        try {
+            const actual = items.find((i) => i.id === id);
+            if (!actual) return;
+            await academicInfoApi.update(id, {
+                titulo: actual.titulo,
+                categoria: actual.categoria,
+                fecha: actual.fecha,
+                autor: actual.autor,
+                contenido: actual.contenido,
+                estado: nuevoEstado,
+                id_usuario: actual.id_usuario ?? user?.id ?? null
+            });
+            await cargar();
+            mostrarAviso(`Publicación ${nuevoEstado.toLowerCase()}.`);
+        } catch (err) {
+            toast.error(err.message || "No se pudo cambiar el estado.");
+        }
     };
 
-    const eliminarPublicacion = (id) => {
-        const actualizadas = items.filter((i) => i.id !== id);
-        setItems(actualizadas);
-        guardarPublicaciones(actualizadas);
-        mostrarAviso("Publicación eliminada.");
+    const eliminarPublicacion = async (id) => {
+        try {
+            await academicInfoApi.remove(id);
+            await cargar();
+            mostrarAviso("Publicación eliminada.");
+        } catch (err) {
+            toast.error(err.message || "No se pudo eliminar la publicación.");
+        }
+    };
+
+    // ── Confirmaciones ────────────────────────────────────────
+    const pedirConfirmarAprobar = (id, titulo) =>
+        setConfirm({ tipo: "aprobar", id, titulo });
+    const pedirConfirmarRechazar = (id, titulo) =>
+        setConfirm({ tipo: "rechazar", id, titulo });
+    const pedirConfirmarEliminar = (id, titulo) =>
+        setConfirm({ tipo: "eliminar", id, titulo });
+
+    const confirmarAccion = () => {
+        if (!confirm) return;
+        const { tipo, id } = confirm;
+        if (tipo === "aprobar") cambiarEstado(id, "Aprobada");
+        else if (tipo === "rechazar") cambiarEstado(id, "Rechazada");
+        else if (tipo === "eliminar") eliminarPublicacion(id);
+        setConfirm(null);
     };
 
     // ── Confirmaciones ────────────────────────────────────────
@@ -274,8 +320,12 @@ function InfoAcademica() {
             {encontradas.length === 0 ? (
                 <div className="empty">
                     <div className="empty__icon">📭</div>
-                    <div className="empty__title">Sin publicaciones</div>
-                    <p className="empty__text">No se encontraron publicaciones con los filtros aplicados.</p>
+                    <div className="empty__title">{cargando ? "Cargando..." : "Sin publicaciones"}</div>
+                    <p className="empty__text">
+                        {cargando
+                            ? "Obteniendo publicaciones del servidor..."
+                            : "No se encontraron publicaciones con los filtros aplicados."}
+                    </p>
                 </div>
             ) : (
                 <div className="info-ac__list">

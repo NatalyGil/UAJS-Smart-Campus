@@ -1,13 +1,10 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import useAuth from "../../context/useAuth";
 import useSearch from "../../hooks/useSearch";
 import Icon from "../../components/Icon/Icon";
 import SearchBar from "../../components/SearchBar/SearchBar";
-import { obtenerSolicitudes, ESTADOS_FINALES } from "../../utils/solicitudes";
-import { obtenerReservas } from "../../utils/reservas";
-import { obtenerNotificacionesPorPerfil } from "../../utils/notificaciones";
-import { obtenerEventosPorPerfil } from "../../utils/eventos";
+
 import services from "../../utils/services";
 import "./Dashboard.css";
 
@@ -34,22 +31,17 @@ function Dashboard() {
     const [mesVista, setMesVista]   = useState(hoy.getMonth());
     const [anioVista, setAnioVista] = useState(hoy.getFullYear());
 
-    // TAREA 6: dependencia en user para que se recalcule si cambie la sesión
-    // Las funciones siempre leen localStorage en el momento de llamarse
-    const solicitudes = useMemo(() => obtenerSolicitudes(), [user]);
-    const misReservas = useMemo(() => obtenerReservas(), [user]);
+    const [solicitudes, setSolicitudes] = useState([]);
+    const [misReservas, setMisReservas] = useState([]);
+    const [notificaciones, setNotificaciones] = useState([]);
+    const [eventos, setEventos] = useState([]);
 
-    // TAREA 3 + 4: notificaciones filtradas por perfil, desde función (no array estático)
-    const notificaciones = useMemo(
-        () => obtenerNotificacionesPorPerfil(user?.rol),
-        [user?.rol]
-    );
-
-    // TAREA 3: eventos desde función (no array estático importado)
-    const eventos = useMemo(
-        () => obtenerEventosPorPerfil(user?.rol),
-        [user?.rol]
-    );
+    useEffect(() => {
+        requestsApi.list().then((d) => setSolicitudes(Array.isArray(d) ? d : [])).catch(() => setSolicitudes([]));
+        reservationsApi.list().then((d) => setMisReservas(Array.isArray(d) ? d : [])).catch(() => setMisReservas([]));
+        notificationsApi.list(user?.id).then((d) => setNotificaciones(Array.isArray(d) ? d : [])).catch(() => setNotificaciones([]));
+        eventsApi.list().then((d) => setEventos(Array.isArray(d) ? d : [])).catch(() => setEventos([]));
+    }, [user?.id]);
 
     // TAREA 5: filtrar servicios por permiso del usuario
     const serviciosFiltrados = useMemo(

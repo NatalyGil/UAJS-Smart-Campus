@@ -2,15 +2,15 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "../../../components/Icon/Icon";
 import useAuth from "../../../context/useAuth";
+import useToast from "../../../context/ToastContext";
 import {
     TIPOS_PQRS,
     TIPOS_DOCUMENTO,
     TIPOS_PERFIL,
     SEDES,
-    AREAS_PQRS,
-    obtenerPqrs,
-    guardarPqrs
+    AREAS_PQRS
 } from "../../../utils/pqrs";
+import { feedbackApi } from "../../../utils/api";
 import "./NuevaPQRS.css";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -47,6 +47,7 @@ function extensionValida(nombre) {
 
 function NuevaPQRS() {
     const { user } = useAuth();
+    const toast = useToast();
     const [form, setForm] = useState(() => ({
         ...formVacio,
         nombre: user?.nombre || "",
@@ -56,6 +57,7 @@ function NuevaPQRS() {
     const [adjuntoNombre, setAdjuntoNombre] = useState("");
     const [errores, setErrores] = useState({});
     const [confirmacion, setConfirmacion] = useState("");
+    const [enviando, setEnviando] = useState(false);
     const inputArchivoRef = useRef(null);
 
     const handleChange = (e) => {
@@ -145,39 +147,42 @@ function NuevaPQRS() {
         return Object.keys(nuevosErrores).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validar()) return;
 
-        const numero = `PQRS-2026-${String(Date.now()).slice(-3)}`;
-        const nueva = {
-            id: numero,
-            tipo: form.tipo,
-            sede: form.sede,
-            tipoPerfil: form.tipoPerfil,
-            tipoDocumento: form.tipoDocumento,
-            identificacion: form.identificacion.trim(),
-            nombre: form.nombre.trim(),
-            telefono: form.telefono.trim(),
-            correo: form.correo.trim(),
-            area: form.area,
-            asunto: form.asunto.trim(),
-            descripcion: form.descripcion.trim(),
-            fecha: new Date().toISOString().slice(0, 10),
-            estado: "Registrada",
-            solicitante: user?.nombre || form.nombre.trim() || "Anónimo",
-            usuarioId: user?.id ?? null,
-            adjunto: adjunto
-                ? { nombre: adjunto.nombre, tipo: adjunto.tipo, dataUrl: adjunto.dataUrl }
-                : null
-        };
+        setEnviando(true);
+        try {
+            const numero = await feedbackApi.create({
+                tipo: form.tipo,
+                sede: form.sede,
+                tipoPerfil: form.tipoPerfil,
+                tipoDocumento: form.tipoDocumento,
+                identificacion: form.identificacion.trim(),
+                nombre: form.nombre.trim(),
+                telefono: form.telefono.trim(),
+                correo: form.correo.trim(),
+                area: form.area,
+                asunto: form.asunto.trim(),
+                descripcion: form.descripcion.trim(),
+                fecha: new Date().toISOString().slice(0, 10),
+                estado: "Registrada",
+                solicitante: user?.nombre || form.nombre.trim() || "Anónimo",
+                usuarioId: user?.id ?? null,
+                prioridad: "Media",
+                adjunto: adjunto
+                    ? { nombre: adjunto.nombre, tipo: adjunto.tipo, dataUrl: adjunto.dataUrl }
+                    : null
+            });
 
-        const lista = obtenerPqrs();
-        lista.unshift(nueva);
-        guardarPqrs(lista);
-        setConfirmacion(
-            `Tu ${form.tipo.toLowerCase()} fue registrada con el número ${numero}.`
-        );
+            setConfirmacion(
+                `Tu ${form.tipo.toLowerCase()} fue registrada con el número ${numero?.id ?? "asignado"}.`
+            );
+        } catch (err) {
+            toast.error(err.message || "No se pudo radicar la PQRS.");
+        } finally {
+            setEnviando(false);
+        }
     };
 
     if (confirmacion) {
@@ -467,9 +472,10 @@ function NuevaPQRS() {
                     <button
                         type="submit"
                         className="nueva-pqrs__submit"
+                        disabled={enviando}
                     >
                         <Icon name="pqrs" size={15} />
-                        Radicar PQRS
+                        {enviando ? "Enviando..." : "Radicar PQRS"}
                     </button>
                 </div>
             </form>

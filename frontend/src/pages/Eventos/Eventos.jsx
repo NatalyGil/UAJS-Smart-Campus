@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Icon from "../../components/Icon/Icon";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import useAuth from "../../context/useAuth";
@@ -6,13 +6,12 @@ import useToast from "../../context/ToastContext";
 import {
     CATEGORIAS_EVENTO,
     ESTADOS_EVENTO,
-    MODALIDADES_EVENTO,
-    obtenerEventos,
-    guardarEventos,
-    estaInscrito,
-    cuposDisponibles,
-    contarInscritos
+import {
+    CATEGORIAS_EVENTO,
+    ESTADOS_EVENTO,
+    MODALIDADES_EVENTO
 } from "../../utils/eventos";
+import { eventsApi } from "../../utils/api";
 import "./Eventos.css";
 
 const CATEGORIA_CLASE = {
@@ -71,10 +70,28 @@ function formatearHora(hora) {
 }
 
 function Eventos() {
-    const [items, setItems] = useState(() => obtenerEventos());
+    const [items, setItems] = useState([]);
+    const [cargando, setCargando] = useState(true);
     const { user, puede } = useAuth();
     const toast = useToast();
     const esAdmin = puede("publicar_eventos");
+
+    const cargar = async () => {
+        setCargando(true);
+        try {
+            const data = await eventsApi.list();
+            setItems(Array.isArray(data) ? data : []);
+        } catch (err) {
+            toast.error(err.message || "No se pudieron cargar los eventos.");
+            setItems([]);
+        } finally {
+            setCargando(false);
+        }
+    };
+
+    useEffect(() => {
+        cargar();
+    }, []);
 
     const [query, setQuery] = useState("");
     const [busqueda, setBusqueda] = useState("");
@@ -121,8 +138,18 @@ function Eventos() {
         return (a.nombre || "").localeCompare(b.nombre || "");
     });
 
-    const contarCategoria = (cat) =>
-        items.filter((e) => e.categoria === cat).length;
+    const contarInscritos = (evento) => Number(evento?.inscritos || 0);
+
+    const estaInscrito = (evento, usuarioId) => {
+        if (!evento || usuarioId == null) return false;
+        const lista = Array.isArray(evento.participantes) ? evento.participantes : [];
+        return lista.some((p) => p.usuarioId === usuarioId || p.id_usuario === usuarioId);
+    };
+
+    const cuposDisponibles = (evento) => {
+        const libres = (Number(evento?.cupo) || 0) - contarInscritos(evento);
+        return Math.max(0, libres);
+    };
 
     const sugerencias = [
         ...new Set(
@@ -172,12 +199,12 @@ function Eventos() {
         setForm({ ...form, [e.target.name]: value });
     };
 
-    const handleSubmit = (e) => {
+const handleSubmit = async (e) => {
         e.preventDefault();
 
         const nombreExiste = items.some(
             (item) =>
-                item.nombre.toLowerCase() === form.nombre.trim().toLowerCase() &&
+                (item.nombre || "").toLowerCase() === form.nombre.trim().toLowerCase() &&
                 item.id !== editandoId
         );
 
@@ -186,40 +213,75 @@ function Eventos() {
             return;
         }
 
-        if (editandoId === null) {
-            const nuevo = { id: Date.now(), ...form, participantes: [] };
-            const nueva = [nuevo, ...items];
-            setItems(nueva);
-            guardarEventos(nueva);
-            mostrarAviso("Evento creado correctamente.");
-        } else {
-            const nueva = items.map((item) => (item.id === editandoId ? { ...item, ...form } : item));
-            setItems(nueva);
-            guardarEventos(nueva);
-            mostrarAviso("Evento actualizado correctamente.");
+try {
+    const payload = {
+        nombre: form.nombre,
+        fecha: form.fecha,
+        hora: form.hora,
+        horaInicio: form.hora,
+        horaFin: form.hora,
+        lugar: form.lugar,
+        ubicacion: form.lugar,
+        categoria: form.categoria,
+        descripcion: form.descripcion,
+        estado: form.estado,
+        cupo: Number(form.cupo) || 0,
+        id_usuario: user?.id ?? null
+    };
+
+    if (editandoId === null) {
+        await eventsApi.create(payload);
+        mostrarAviso("Evento creado correctamente.");
+    } else {
+        await eventsApi.update(editandoId, payload);
+        mostrarAviso("Evento actualizado correctamente.");
+    }
+
+    setModalAbierto(false);
+    await cargar();
+} catch (err) {
+    setError(err.message || "No se pudo guardar el evento.");
+}
         }
-        setModalAbierto(false);
     };
 
-    const eliminarEvento = (ev) => {
-        const nueva = items.filter((item) => item.id !== ev.id);
-        setItems(nueva);
-        guardarEventos(nueva);
-        setDetalleAbierto(null);
-        mostrarAviso(`Evento "${ev.nombre}" eliminado.`);
+    const eliminarEvento = async (ev) => {
+        if (!window.confirm(`¿Eliminar el evento "${ev.nombre}"?`)) return;
+        try {
+            await eventsApi.remove(ev.id);
+            setDetalleAbierto(null);
+            await cargar();
+            mostrarAviso(`Evento "${ev.nombre}" eliminado.`);
+        } catch (err) {
+            mostrarAviso(err.message || "No se pudo eliminar el evento.");
+        }
     };
 
-    const cambiarEstado = (ev, nuevoEstado) => {
-        const nueva = items.map((item) =>
-            item.id === ev.id ? { ...item, estado: nuevoEstado } : item
-        );
-        setItems(nueva);
-        guardarEventos(nueva);
-        setDetalleAbierto({ ...ev, estado: nuevoEstado });
-        mostrarAviso(`Estado del evento actualizado a "${nuevoEstado}".`);
+    const cambiarEstado = async (ev, nuevoEstado) => {
+        try {
+            await eventsApi.update(ev.id, {
+                nombre: ev.nombre,
+                fecha: ev.fecha,
+                hora: ev.hora,
+                horaInicio: ev.hora,
+                horaFin: ev.horaFin,
+                lugar: ev.lugar,
+                ubicacion: ev.ubicacion ?? ev.lugar,
+                categoria: ev.categoria,
+                descripcion: ev.descripcion,
+                estado: nuevoEstado,
+                cupo: ev.cupo,
+                id_usuario: ev.id_usuario ?? user?.id ?? null
+            });
+            setDetalleAbierto({ ...ev, estado: nuevoEstado });
+            await cargar();
+            mostrarAviso(`Estado del evento actualizado a "${nuevoEstado}".`);
+        } catch (err) {
+            mostrarAviso(err.message || "No se pudo actualizar el estado.");
+        }
     };
 
-    const inscribirse = (ev) => {
+const inscribirse = async (ev) => {
         if (!user) {
             toast.warning("Inicia sesión para inscribirte.");
             return;
@@ -232,53 +294,13 @@ function Eventos() {
             toast.error("El evento ya alcanzó su cupo máximo.");
             return;
         }
-        const participante = {
-            usuarioId: user.id,
-            nombre: user.nombre || "Usuario",
-            fecha: new Date().toISOString().slice(0, 10)
-        };
-        const nueva = items.map((item) =>
-            item.id === ev.id
-                ? { ...item, participantes: [...(item.participantes || []), participante] }
-                : item
-        );
-        setItems(nueva);
-        guardarEventos(nueva);
-        setDetalleAbierto((prev) =>
-            prev && prev.id === ev.id
-                ? { ...prev, participantes: [...(prev.participantes || []), participante] }
-                : prev
-        );
-        toast.success(`Te inscribiste a "${ev.nombre}".`);
-    };
-
-    const cancelarInscripcion = (ev) => {
-        if (!user) return;
-        if (!estaInscrito(ev, user.id)) return;
-        const nueva = items.map((item) =>
-            item.id === ev.id
-                ? {
-                    ...item,
-                    participantes: (item.participantes || []).filter(
-                        (p) => p.usuarioId !== user.id
-                    )
-                }
-                : item
-        );
-        setItems(nueva);
-        guardarEventos(nueva);
-        setDetalleAbierto((prev) =>
-            prev && prev.id === ev.id
-                ? {
-                    ...prev,
-                    participantes: (prev.participantes || []).filter(
-                        (p) => p.usuarioId !== user.id
-                    )
-                }
-                : prev
-        );
-        toast.info("Inscripción cancelada.");
-    };
+try {
+    await eventsApi.register(ev.id);
+    await cargar();
+    toast.success(`Te inscribiste a "${ev.nombre}".`);
+} catch (err) {
+    toast.error(err.message || "No se pudo completar la inscripción.");
+}
 
     const verDetalle = (ev) => setDetalleAbierto(ev);
 
@@ -405,7 +427,9 @@ function Eventos() {
 
             {encontrados.length === 0 ? (
                 <div className="empty">
-                    No se encontraron eventos con los filtros aplicados.
+                    {cargando
+                        ? "Cargando eventos..."
+                        : "No se encontraron eventos con los filtros aplicados."}
                 </div>
             ) : (
                 <div className="eventos__grid">
