@@ -1,25 +1,29 @@
 const pool = require('../config/database');
 const { client, INDICATORS } = require('../config/elasticsearch');
 
-const INDEX_MAPPINGS = {
-    [INDICATORS.USUARIOS]: {
-        settings: {
-            analysis: {
-                analyzer: {
-                    spanish_analyzer: {
-                        type: 'custom',
-                        tokenizer: 'standard',
-                        filter: ['lowercase', 'asciifolding', 'spanish_stop']
-                    }
-                },
-                filter: {
-                    spanish_stop: {
-                        type: 'stop',
-                        stopwords: '_spanish_'
-                    }
-                }
+// Analizador español: debe declararse en CADA índice, porque los mappings
+// de abajo lo referencian y Elasticsearch no lo hereda entre índices.
+const ANALYSIS = {
+    analysis: {
+        analyzer: {
+            spanish_analyzer: {
+                type: 'custom',
+                tokenizer: 'standard',
+                filter: ['lowercase', 'asciifolding', 'spanish_stop']
             }
         },
+        filter: {
+            spanish_stop: {
+                type: 'stop',
+                stopwords: '_spanish_'
+            }
+        }
+    }
+};
+
+const INDEX_MAPPINGS = {
+    [INDICATORS.USUARIOS]: {
+        settings: ANALYSIS,
         mappings: {
             properties: {
                 id_usuario: { type: 'integer' },
@@ -111,9 +115,11 @@ async function createIndex(indexName) {
     if (exists) {
         await client.indices.delete({ index: indexName });
     }
+    const config = INDEX_MAPPINGS[indexName];
     await client.indices.create({
         index: indexName,
-        ...INDEX_MAPPINGS[indexName]
+        settings: ANALYSIS,
+        mappings: config.mappings
     });
     console.log(`Índice ${indexName} creado correctamente`);
 }

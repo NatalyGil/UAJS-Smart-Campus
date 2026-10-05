@@ -26,10 +26,14 @@ function DashboardLayout() {
         return () => mq.removeEventListener("change", handler);
     }, []);
 
-    // Cerrar el drawer al navegar
-    useEffect(() => {
+    // Cerrar el drawer al navegar. Se ajusta durante el render (patrón oficial
+    // de React para estado derivado de props) en vez de dentro de un efecto,
+    // que provocaba un render extra en cada navegación.
+    const [rutaDelDrawer, setRutaDelDrawer] = useState(location.pathname);
+    if (rutaDelDrawer !== location.pathname) {
+        setRutaDelDrawer(location.pathname);
         setSidebarOpen(false);
-    }, [location.pathname]);
+    }
 
     useKeyboardShortcuts({
         onEscape: () => {

@@ -39,6 +39,10 @@ out/
 *.sql
 *uajs_smart_campus.sql
 
+# El esquema del proyecto sí se versiona: docker-compose lo monta en
+# /docker-entrypoint-initdb.d para inicializar MySQL.
+!backend/uajs_smart_campus.sql
+
 # ============================================================
 # CACHE
 # ============================================================

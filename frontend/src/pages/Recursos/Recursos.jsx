@@ -4,7 +4,18 @@ import Modal from "../../components/Modal/Modal";
 import Input from "../../components/Input/Input";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import useAuth from "../../context/useAuth";
-import { TIPOS_RECURSO, CATEGORIA_POR_TIPO, CATEGORIAS_RECURSO, obtenerRecursos, guardarRecursos } from "../../utils/recursos";
+import useColeccion from "../../hooks/useColeccion";
+import {
+    CLAVE_RECURSO,
+    TIPOS_RECURSO,
+    CATEGORIA_POR_TIPO,
+    CATEGORIAS_RECURSO,
+    ESTADOS_RECURSO,
+    DISPONIBILIDADES_RECURSO,
+    crearRecurso,
+    actualizarRecurso,
+    eliminarRecurso as eliminarRecursoEnApi
+} from "../../utils/recursos";
 import "./Recursos.css";
 
 const CATEGORIA_VARIANT = {
@@ -16,22 +27,18 @@ const CATEGORIA_VARIANT = {
 
 const ESTADO_VARIANT = {
     Disponible: { etiqueta: "DISPONIBLE", clase: "available", bg: "blue" },
-    "En mantenimiento": { etiqueta: "MANTENIMIENTO", clase: "maintenance", bg: "orange" },
-    Ocupado: { etiqueta: "OCUPADO", clase: "unavailable", bg: "red" },
+    Mantenimiento: { etiqueta: "MANTENIMIENTO", clase: "maintenance", bg: "orange" },
     Inactivo: { etiqueta: "NO DISPONIBLE", clase: "unavailable", bg: "red" }
 };
 
 function estadoVisual(recurso) {
-    if (recurso.estado === "En mantenimiento") {
-        return ESTADO_VARIANT["En mantenimiento"];
+    if (recurso.estado === "Mantenimiento") {
+        return ESTADO_VARIANT.Mantenimiento;
     }
     if (recurso.estado === "Inactivo") {
         return ESTADO_VARIANT.Inactivo;
     }
-    if (recurso.disponibilidad === "Disponible") {
-        return ESTADO_VARIANT.Disponible;
-    }
-    return ESTADO_VARIANT.Ocupado;
+    return ESTADO_VARIANT.Disponible;
 }
 
 const CATEGORIAS = [
@@ -45,12 +52,13 @@ const CATEGORIAS = [
 const EDIFICIOS = ["Todos", "Bloque A", "Bloque B", "Bloque C"];
 
 function obtenerEdificio(ubicacion) {
-    const bloque = (ubicacion || "").split("·")[0].trim();
-    return bloque || "Otro";
+    // El backend guarda ubicaciones como 'Edificio A - Piso 1' o 'Bloque A · Piso 1'.
+    const bruto = String(ubicacion || "").split("·")[0].split("-")[0].trim();
+    return bruto.replace(/^edificio\s+/i, "Bloque ") || "Otro";
 }
 
 function Recursos() {
-    const [items, setItems] = useState(() => obtenerRecursos());
+    const { items, recargar, enLinea } = useColeccion(CLAVE_RECURSO);
     const { puede } = useAuth();
     const puedeAdmin = puede("administrar_recursos");
 
@@ -70,7 +78,8 @@ function Recursos() {
         tipo: "Salas",
         capacidad: "",
         ubicacion: "",
-        estado: "Activo",
+        descripcion: "",
+        estado: "Disponible",
         disponibilidad: "Disponible"
     });
     const [errorRecurso, setErrorRecurso] = useState("");
@@ -83,10 +92,10 @@ function Recursos() {
 
     const stats = useMemo(() => {
         const disponibles = items.filter(
-            (r) => r.disponibilidad === "Disponible"
+            (r) => r.disponibilidad === "Disponible" && r.estado === "Disponible"
         ).length;
         const mantenimiento = items.filter(
-            (r) => r.estado === "En mantenimiento"
+            (r) => r.estado === "Mantenimiento"
         ).length;
         return {
             total: items.length,
@@ -124,7 +133,7 @@ function Recursos() {
                 if (estado === "Disponible" && recurso.disponibilidad !== "Disponible") {
                     return false;
                 }
-                if (estado === "Mantenimiento" && recurso.estado !== "En mantenimiento") {
+                if (estado === "Mantenimiento" && recurso.estado !== "Mantenimiento") {
                     return false;
                 }
                 if (estado === "Reservado" && recurso.disponibilidad === "Disponible") {
@@ -152,7 +161,8 @@ function Recursos() {
             categoria: "Escenario",
             capacidad: "",
             ubicacion: "",
-            estado: "Activo",
+            descripcion: "",
+            estado: "Disponible",
             disponibilidad: "Disponible"
         });
         setErrorRecurso("");
@@ -166,8 +176,9 @@ function Recursos() {
             codigo: recurso.codigo,
             tipo: recurso.tipo,
             categoria: recurso.categoria ?? CATEGORIA_POR_TIPO[recurso.tipo] ?? "Escenario",
-            capacidad: String(recurso.capacidad),
+            capacidad: String(recurso.capacidad ?? ""),
             ubicacion: recurso.ubicacion,
+            descripcion: recurso.descripcion || "",
             estado: recurso.estado,
             disponibilidad: recurso.disponibilidad
         });
@@ -193,17 +204,21 @@ function Recursos() {
         }
     };
 
-    const handleRecursoSubmit = (e) => {
+    const handleRecursoSubmit = async (e) => {
         e.preventDefault();
 
         if (!formRecurso.nombre.trim() || !formRecurso.codigo.trim()) {
             setErrorRecurso("El nombre y el código son obligatorios.");
             return;
         }
+        if (!formRecurso.ubicacion.trim()) {
+            setErrorRecurso("La ubicación es obligatoria.");
+            return;
+        }
 
         const duplicado = items.some(
             (item) =>
-                item.codigo.toLowerCase() === formRecurso.codigo.trim().toLowerCase() &&
+                (item.codigo || "").toLowerCase() === formRecurso.codigo.trim().toLowerCase() &&
                 item.id !== editandoId
         );
         if (duplicado) {
@@ -216,36 +231,47 @@ function Recursos() {
             codigo: formRecurso.codigo.trim(),
             tipo: formRecurso.tipo,
             categoria: formRecurso.categoria || CATEGORIA_POR_TIPO[formRecurso.tipo] || "Escenario",
+            descripcion: (formRecurso.descripcion || "").trim(),
             capacidad: Number(formRecurso.capacidad) || 1,
             ubicacion: formRecurso.ubicacion.trim() || "Bloque A",
             estado: formRecurso.estado,
             disponibilidad: formRecurso.disponibilidad
         };
 
-        if (editandoId === null) {
-            const nuevo = { id: `R-${Date.now()}`, ...datos };
-            const nueva = [...items, nuevo];
-            setItems(nueva);
-            guardarRecursos(nueva);
-            mostrarAviso("Recurso creado correctamente.");
-        } else {
-            const nueva = items.map((item) => (item.id === editandoId ? { ...item, ...datos } : item));
-            setItems(nueva);
-            guardarRecursos(nueva);
-            mostrarAviso("Recurso actualizado correctamente.");
+        try {
+            if (editandoId === null) {
+                await crearRecurso(datos);
+                mostrarAviso("Recurso creado correctamente.");
+            } else {
+                const actual = items.find((item) => item.id === editandoId);
+                if (!actual) {
+                    setErrorRecurso("El recurso ya no existe en la lista. Recarga la página.");
+                    return;
+                }
+                await actualizarRecurso(actual, datos);
+                mostrarAviso("Recurso actualizado correctamente.");
+            }
+            setCrudAbierto(false);
+        } catch (fallo) {
+            const mensaje =
+                fallo?.message || "No se pudo guardar el recurso en el servidor.";
+            setErrorRecurso(mensaje);
         }
-        setCrudAbierto(false);
     };
 
-    const eliminarRecurso = (recurso) => {
+    const eliminarRecurso = async (recurso) => {
         const confirma = window.confirm(
             `¿Eliminar el recurso "${recurso.nombre}"?`
         );
         if (!confirma) return;
-        const nueva = items.filter((item) => item.id !== recurso.id);
-        setItems(nueva);
-        guardarRecursos(nueva);
-        mostrarAviso(`Recurso "${recurso.nombre}" eliminado.`);
+        try {
+            await eliminarRecursoEnApi(recurso);
+            setDetalleRecurso(null);
+            mostrarAviso(`Recurso "${recurso.nombre}" eliminado.`);
+        } catch (fallo) {
+            setErrorRecurso(fallo?.message || "No se pudo eliminar el recurso.");
+            mostrarAviso(fallo?.message || "No se pudo eliminar el recurso.");
+        }
     };
 
     return (
@@ -267,6 +293,16 @@ function Recursos() {
                 <div className="toast toast--success">
                     <Icon name="info" size={14} />
                     {aviso}
+                </div>
+            )}
+
+            {enLinea === false && (
+                <div className="toast toast--error">
+                    <Icon name="info" size={14} />
+                    Sin conexión con el servidor: se muestra la última data sincronizada.
+                    <button className="button button--ghost button--sm" onClick={recargar}>
+                        Reintentar
+                    </button>
                 </div>
             )}
 
@@ -429,8 +465,9 @@ function Recursos() {
                                     </div>
                                     <h3>{recurso.nombre}</h3>
                                     <p className="recursos__resource-description">
-                                        Recurso {recurso.tipo.toLowerCase()} con capacidad para
-                                        {" "}{recurso.capacidad} persona(s), ubicado en {recurso.ubicacion}.
+                                        {recurso.descripcion
+                                            ? recurso.descripcion
+                                            : `Recurso ${recurso.tipo.toLowerCase()} con capacidad para ${recurso.capacidad} persona(s), ubicado en ${recurso.ubicacion}.`}
                                     </p>
 
                                     <div className="recursos__resource-details">
@@ -607,33 +644,44 @@ function Recursos() {
                         placeholder="Ej. Bloque A · Piso 1"
                     />
 
-                    <div className="recursos__form-row">
-                        <div>
-                            <label className="recursos__field-label">Estado</label>
-                            <select
-                                className="recursos__filter-select"
-                                name="estado"
-                                value={formRecurso.estado}
-                                onChange={handleRecursoChange}
-                            >
-                                <option value="Activo">Activo</option>
-                                <option value="En mantenimiento">En mantenimiento</option>
-                                <option value="Inactivo">Inactivo</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="recursos__field-label">Disponibilidad</label>
-                            <select
-                                className="recursos__filter-select"
-                                name="disponibilidad"
-                                value={formRecurso.disponibilidad}
-                                onChange={handleRecursoChange}
-                            >
-                                <option value="Disponible">Disponible</option>
-                                <option value="Ocupado">Ocupado</option>
-                            </select>
-                        </div>
-                    </div>
+                    <Input
+                        label="Descripción"
+                        type="text"
+                        name="descripcion"
+                        value={formRecurso.descripcion}
+                        onChange={handleRecursoChange}
+                        id="recurso-crud-descripcion"
+                        placeholder="Ej. Sala para reuniones y talleres"
+                    />
+
+                            <div className="recursos__form-row">
+                                <div>
+                                    <label className="recursos__field-label">Estado</label>
+                                    <select
+                                        className="recursos__filter-select"
+                                        name="estado"
+                                        value={formRecurso.estado}
+                                        onChange={handleRecursoChange}
+                                    >
+                                        {ESTADOS_RECURSO.map((est) => (
+                                            <option key={est} value={est}>{est}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="recursos__field-label">Disponibilidad</label>
+                                    <select
+                                        className="recursos__filter-select"
+                                        name="disponibilidad"
+                                        value={formRecurso.disponibilidad}
+                                        onChange={handleRecursoChange}
+                                    >
+                                        {DISPONIBILIDADES_RECURSO.map((disp) => (
+                                            <option key={disp} value={disp}>{disp}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
 
                     <div className="recursos__modal-footer">
                         <button

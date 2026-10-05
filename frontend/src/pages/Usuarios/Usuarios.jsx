@@ -5,10 +5,11 @@ import DataTable from "../../components/DataTable/DataTable";
 import Pagination from "../../components/Pagination/Pagination";
 import Modal from "../../components/Modal/Modal";
 import useAuth from "../../context/useAuth";
-import { ROLES, obtenerUsuarios, guardarUsuarios } from "../../utils/users";
+import { ROLES, crearUsuario, actualizarUsuario, alternarEstadoUsuario } from "../../utils/users";
 import { getUserInitials } from "../../utils/avatar";
 import useSearch from "../../hooks/useSearch";
 import usePagination from "../../hooks/usePagination";
+import useColeccion from "../../hooks/useColeccion";
 import "./Usuarios.css";
 
 const ROL_ICONO = {
@@ -73,7 +74,8 @@ function Usuarios() {
 }
 
 function UsuariosAdmin() {
-    const [items, setItems] = useState(obtenerUsuarios);
+    const { items, recargar, cargando, error: errorColeccion, enLinea } = useColeccion("usuarios");
+
     const [modalAbierto, setModalAbierto] = useState(false);
     const [editandoId, setEditandoId] = useState(null);
     const [form, setForm] = useState(vacio);
@@ -103,6 +105,11 @@ function UsuariosAdmin() {
     const activos   = items.filter((i) => i.estado === "Activo").length;
     const inactivos = items.filter((i) => i.estado === "Inactivo").length;
     const contarRol = (rol) => items.filter((i) => i.rol === rol).length;
+
+    const CAMPOS_OBLIGATORIOS = ["cedula", "usuario", "nombre", "correo", "programa"];
+    const faltantes = CAMPOS_OBLIGATORIOS.filter(
+        (campo) => !String(form[campo] ?? "").trim()
+    );
 
     const sugerencias = useMemo(() => [
         ...new Set(
@@ -169,7 +176,7 @@ function UsuariosAdmin() {
         if (e.target.name === "password") setPwdError("");
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         // TAREA 9: validar contraseña en creación
@@ -203,35 +210,35 @@ function UsuariosAdmin() {
             return;
         }
 
-        if (editandoId === null) {
-            // Crear nuevo usuario
-            const nuevo = {
-                id:       Date.now(),
-                cedula:   form.cedula.trim(),
-                usuario:  form.usuario.trim(),
-                password: form.password.trim(),
-                nombre:   form.nombre.trim(),       // TAREA 3: nombre completo directo
-                correo:   form.correo.trim(),
-                codigo:   form.codigo.trim(),
-                telefono: form.telefono.trim(),
-                rol:      form.rol,
-                programa: form.programa.trim(),
-                estado:   form.estado
-            };
-            const lista = [nuevo, ...items];
-            setItems(lista);
-            guardarUsuarios(lista);
-            mostrarAviso("Usuario creado correctamente.");
-        } else {
-            // Editar usuario existente
-            const lista = items.map((item) => {
-                if (item.id !== editandoId) return item;
-                return {
-                    ...item,
+        try {
+            if (editandoId === null) {
+                // Crear nuevo usuario
+                const nuevo = {
+                    cedula:   form.cedula.trim(),
+                    usuario:  form.usuario.trim(),
+                    password: form.password.trim(),
+                    nombre:   form.nombre.trim(),       // TAREA 3: nombre completo directo
+                    correo:   form.correo.trim(),
+                    codigo:   form.codigo.trim(),
+                    telefono: form.telefono.trim(),
+                    rol:      form.rol,
+                    programa: form.programa.trim(),
+                    estado:   form.estado
+                };
+                await crearUsuario(nuevo);
+                mostrarAviso("Usuario creado correctamente.");
+            } else {
+                // Editar usuario existente
+                const item = items.find((u) => u.id === editandoId);
+                if (!item) {
+                    setError("Usuario no encontrado.");
+                    return;
+                }
+                const cambios = {
                     cedula:    form.cedula.trim(),
                     usuario:  form.usuario.trim(),
                     // TAREA 2: preservar contraseña anterior si el campo queda vacío
-                    password: form.password.trim() || item.password,
+                    password: form.password.trim(),
                     nombre:   form.nombre.trim(),   // TAREA 3: nombre completo directo
                     correo:   form.correo.trim(),
                     codigo:   form.codigo.trim(),
@@ -240,30 +247,31 @@ function UsuariosAdmin() {
                     programa: form.programa.trim(),
                     estado:   form.estado
                 };
-            });
-            setItems(lista);
-            guardarUsuarios(lista);
-            mostrarAviso("Usuario actualizado correctamente.");
+                await actualizarUsuario(item, cambios);
+                mostrarAviso("Usuario actualizado correctamente.");
+            }
+            setModalAbierto(false);
+            // Forzar refresco para traer IDs reales del backend
+            await recargar();
+        } catch (err) {
+            setError(err.message || "Error al guardar el usuario.");
         }
-
-        setModalAbierto(false);
     };
 
-    const alternarEstado = useCallback((item) => {
-        const activando = item.estado !== "Activo";
-        const lista = items.map((u) =>
-            u.id === item.id
-                ? { ...u, estado: activando ? "Activo" : "Inactivo" }
-                : u
-        );
-        setItems(lista);
-        guardarUsuarios(lista);
-        mostrarAviso(
-            activando
-                ? `Usuario "${item.usuario}" activado.`
-                : `Usuario "${item.usuario}" desactivado.`
-        );
-    }, [items, mostrarAviso]);
+    const alternarEstado = useCallback(async (item) => {
+        try {
+            await alternarEstadoUsuario(item);
+            const activando = item.estado !== "Activo";
+            mostrarAviso(
+                activando
+                    ? `Usuario "${item.usuario}" activado.`
+                    : `Usuario "${item.usuario}" desactivado.`
+            );
+            await recargar();
+        } catch (err) {
+            setError(err.message || "Error al cambiar el estado del usuario.");
+        }
+    }, [mostrarAviso, recargar]);
 
     // TAREA 1: columnas con avatar por fila (sin foto de sesión)
     const columns = useMemo(() => [
@@ -358,6 +366,20 @@ function UsuariosAdmin() {
                     Nuevo usuario
                 </button>
             </div>
+
+            {/* Indicador de estado de conexión */}
+            {cargando && (
+                <div className="toast toast--info">
+                    <Icon name="cargando" size={14} />
+                    Sincronizando con el servidor…
+                </div>
+            )}
+            {errorColeccion && !enLinea && (
+                <div className="toast toast--warning">
+                    <Icon name="alerta" size={14} />
+                    Sin conexión al servidor. Mostrando datos locales.
+                </div>
+            )}
 
             {aviso && (
                 <div className="toast toast--success">
@@ -531,11 +553,17 @@ function UsuariosAdmin() {
                 subtitle="Completa los datos del usuario."
                 onClose={cerrar}
             >
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} className="users__form">
                     {error && <p className="users__error">{error}</p>}
 
+                    <p className="users__form-note">
+                        Los campos marcados con <span>*</span> son obligatorios.
+                    </p>
+
                     <div className="users__form-group">
-                        <label htmlFor="u-usuario">Usuario</label>
+                        <label htmlFor="u-usuario">
+                            Usuario <span className="users__req">*</span>
+                        </label>
                         <input
                             id="u-usuario"
                             type="text"
@@ -547,7 +575,9 @@ function UsuariosAdmin() {
                     </div>
 
                     <div className="users__form-group">
-                        <label htmlFor="u-cedula">Cédula</label>
+                        <label htmlFor="u-cedula">
+                            Cédula <span className="users__req">*</span>
+                        </label>
                         <input
                             id="u-cedula"
                             type="text"
@@ -560,7 +590,9 @@ function UsuariosAdmin() {
 
                     {/* TAREA 3: campo único "Nombre completo" */}
                     <div className="users__form-group">
-                        <label htmlFor="u-nombre">Nombre completo</label>
+                        <label htmlFor="u-nombre">
+                            Nombre completo <span className="users__req">*</span>
+                        </label>
                         <input
                             id="u-nombre"
                             type="text"
@@ -573,7 +605,9 @@ function UsuariosAdmin() {
 
                     <div className="form-grid">
                         <div className="users__form-group">
-                            <label htmlFor="u-correo">Correo</label>
+                            <label htmlFor="u-correo">
+                                Correo <span className="users__req">*</span>
+                            </label>
                             <input
                                 id="u-correo"
                                 type="email"
@@ -611,7 +645,10 @@ function UsuariosAdmin() {
                         </div>
 
                         <div className="users__form-group">
-                            <label htmlFor="u-programa">Programa / Dependencia</label>
+                            <label htmlFor="u-programa">
+                                Programa / Dependencia{" "}
+                                <span className="users__req">*</span>
+                            </label>
                             <input
                                 id="u-programa"
                                 type="text"
@@ -626,9 +663,14 @@ function UsuariosAdmin() {
                     {/* TAREA 2 & 9: campo contraseña con validación y hint */}
                     <div className="users__form-group">
                         <label htmlFor="u-password">
-                            {editandoId === null
-                                ? "Contraseña *"
-                                : "Contraseña (dejar vacío para conservar la actual)"}
+                            {editandoId === null ? (
+                                <>
+                                    Contraseña{" "}
+                                    <span className="users__req">*</span>
+                                </>
+                            ) : (
+                                "Contraseña (dejar vacío para conservar la actual)"
+                            )}
                         </label>
                         <div className="users__password-wrap">
                             <input
@@ -689,6 +731,16 @@ function UsuariosAdmin() {
                         </div>
                     </div>
 
+                    {faltantes.length > 0 && (
+                        <p className="users__form-pending">
+                            Faltan {faltantes.length}{" "}
+                            {faltantes.length === 1
+                                ? "campo obligatorio por completar"
+                                : "campos obligatorios por completar"}
+                            .
+                        </p>
+                    )}
+
                     <div className="modal__footer">
                         <button
                             type="button"
@@ -700,13 +752,7 @@ function UsuariosAdmin() {
                         <button
                             type="submit"
                             className="button button--accent button--md"
-                            disabled={
-                                !form.cedula ||
-                                !form.usuario ||
-                                !form.nombre  ||
-                                !form.correo  ||
-                                !form.programa
-                            }
+                            disabled={faltantes.length > 0 || cargando}
                         >
                             {editandoId === null ? "Crear usuario" : "Guardar cambios"}
                         </button>

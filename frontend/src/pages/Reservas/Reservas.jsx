@@ -4,11 +4,17 @@ import Modal from "../../components/Modal/Modal";
 import Input from "../../components/Input/Input";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import Pagination from "../../components/Pagination/Pagination";
-import recursos from "../../utils/recursos";
-import { esEscenario } from "../../utils/recursos";
-import { obtenerReservas, guardarReservas } from "../../utils/reservas";
 import useAuth from "../../context/useAuth";
 import usePagination from "../../hooks/usePagination";
+import useColeccion from "../../hooks/useColeccion";
+import { CLAVE_RECURSO, TIPOS_RECURSO, esEscenario, esReservable } from "../../utils/recursos";
+import {
+    CLAVE_RESERVAS,
+    crearReserva,
+    cancelarReserva as cancelarReservaEnApi,
+    mismoRecurso
+} from "../../utils/reservas";
+import { useToast } from "../../context/ToastContext";
 import "./Reservas.css";
 
 const TIPO_VARIANT = {
@@ -26,13 +32,6 @@ const ESTADO_CLASE = {
     Cancelada: "finished"
 };
 
-function esReservable(recurso) {
-    return (
-        recurso.estado === "Activo" &&
-        recurso.disponibilidad === "Disponible"
-    );
-}
-
 function formatearHora(hora24) {
     if (!hora24) return "";
     const [hora, minuto] = hora24.split(":").map(Number);
@@ -43,19 +42,23 @@ function formatearHora(hora24) {
 
 function Reservas() {
     const { user } = useAuth();
+    const toast = useToast();
+    const { items: recursos, enLinea: enLineaRecursos, recargar: recargarRecursos } =
+        useColeccion(CLAVE_RECURSO);
+    const { items: misReservas, enLinea, recargar } = useColeccion(CLAVE_RESERVAS);
+
     const [query, setQuery] = useState("");
     const [busqueda, setBusqueda] = useState("");
     const [tipo, setTipo] = useState("Todos");
     const [fecha, setFecha] = useState("");
     const [hora, setHora] = useState("Cualquier hora");
     const [recursoSeleccionado, setRecursoSeleccionado] = useState(null);
-    const [misReservas, setMisReservas] = useState(() => obtenerReservas());
     const [modalAbierto, setModalAbierto] = useState(false);
     const [form, setForm] = useState({
         fecha: "",
-        horaInicio: "",
-        horaFin: "",
-        proposito: ""
+        hora_inicio: "",
+        hora_fin: "",
+        motivo: ""
     });
     const [errores, setErrores] = useState({});
     const [confirmacion, setConfirmacion] = useState("");
@@ -86,13 +89,13 @@ function Reservas() {
                 if (!fecha) return true;
                 const tieneReserva = misReservas.some(
                     (r) =>
-                        r.recurso === recurso.nombre &&
+                        mismoRecurso(r, recurso) &&
                         r.fecha === fecha &&
                         r.estado !== "Cancelada"
                 );
                 return !tieneReserva;
             });
-    }, [busqueda, tipo, fecha, misReservas]);
+    }, [busqueda, tipo, fecha, misReservas, recursos]);
 
     const refrescar = () => {
         if (busquedaAlerta) {
@@ -109,35 +112,35 @@ function Reservas() {
             nuevosErrores.fecha = "No puedes reservar en una fecha pasada.";
         }
 
-        if (!form.horaInicio) {
-            nuevosErrores.horaInicio = "La hora de inicio es obligatoria.";
-        } else if (form.horaInicio < "07:00" || form.horaInicio > "21:00") {
-            nuevosErrores.horaInicio = "El horario permitido es de 7:00 a.m. a 9:00 p.m.";
+        if (!form.hora_inicio) {
+            nuevosErrores.hora_inicio = "La hora de inicio es obligatoria.";
+        } else if (form.hora_inicio < "07:00" || form.hora_inicio > "21:00") {
+            nuevosErrores.hora_inicio = "El horario permitido es de 7:00 a.m. a 9:00 p.m.";
         }
 
-        if (!form.horaFin) {
-            nuevosErrores.horaFin = "La hora de finalización es obligatoria.";
-        } else if (form.horaFin < "07:00" || form.horaFin > "21:00") {
-            nuevosErrores.horaFin = "El horario permitido es de 7:00 a.m. a 9:00 p.m.";
+        if (!form.hora_fin) {
+            nuevosErrores.hora_fin = "La hora de finalización es obligatoria.";
+        } else if (form.hora_fin < "07:00" || form.hora_fin > "21:00") {
+            nuevosErrores.hora_fin = "El horario permitido es de 7:00 a.m. a 9:00 p.m.";
         }
 
-        if (form.horaInicio && form.horaFin && form.horaInicio >= form.horaFin) {
-            nuevosErrores.horaFin = "La hora de fin debe ser posterior a la hora de inicio.";
+        if (form.hora_inicio && form.hora_fin && form.hora_inicio >= form.hora_fin) {
+            nuevosErrores.hora_fin = "La hora de fin debe ser posterior a la hora de inicio.";
         }
 
         if (Object.keys(nuevosErrores).length === 0 && recursoSeleccionado) {
             const conflicto = misReservas.find((reserva) => {
-                if (reserva.recurso !== recursoSeleccionado.nombre) return false;
+                if (!mismoRecurso(reserva, recursoSeleccionado)) return false;
                 if (reserva.fecha !== form.fecha) return false;
                 if (reserva.estado === "Cancelada") return false;
                 return (
-                    form.horaInicio < reserva.horaFin &&
-                    reserva.horaInicio < form.horaFin
+                    form.hora_inicio < reserva.hora_fin &&
+                    reserva.hora_inicio < form.hora_fin
                 );
             });
 
             if (conflicto) {
-                nuevosErrores.conflicto = `Este recurso ya está reservado en la fecha y horario seleccionados (${formatearHora(conflicto.horaInicio)} - ${formatearHora(conflicto.horaFin)}).`;
+                nuevosErrores.conflicto = `Este recurso ya está reservado en la fecha y horario seleccionados (${formatearHora(conflicto.hora_inicio)} - ${formatearHora(conflicto.hora_fin)}).`;
             }
         }
 
@@ -154,7 +157,7 @@ function Reservas() {
         if (recurso) setRecursoSeleccionado(recurso);
         setConfirmacion("");
         setErrores({});
-        setForm({ fecha: "", horaInicio: "", horaFin: "", proposito: "" });
+        setForm({ fecha: "", hora_inicio: "", hora_fin: "", motivo: "" });
         setModalAbierto(true);
     };
 
@@ -163,40 +166,53 @@ function Reservas() {
         setRecursoSeleccionado(null);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validarFormulario()) return;
 
+        if (!user?.id) {
+            toast.warning("Inicia sesión para registrar una reserva.");
+            return;
+        }
+
+        if (!recursoSeleccionado) {
+            setErrores({ conflicto: "Selecciona un recurso para reservar." });
+            return;
+        }
+
         const nueva = {
-            id: `RES-${Date.now()}`,
+            id_usuario: user.id,
+            id_recurso: recursoSeleccionado.id,
             recurso: recursoSeleccionado.nombre,
-            tipoRecurso: recursoSeleccionado.tipo ?? "",
-            usuarioId: user?.id ?? null,
-            usuario: user?.nombre ?? "",
-            ...form,
+            tipo_recurso: recursoSeleccionado.tipo ?? "",
+            usuario: user.nombre ?? "",
+            fecha: form.fecha,
+            hora_inicio: form.hora_inicio,
+            hora_fin: form.hora_fin,
+            motivo: form.motivo,
+            observaciones: "",
             estado: "Pendiente"
         };
 
-        setMisReservas((prev) => {
-            const actualizadas = [nueva, ...prev];
-            guardarReservas(actualizadas);
-            return actualizadas;
-        });
-        setConfirmacion(
-            `Reserva de "${recursoSeleccionado.nombre}" registrada correctamente.`
-        );
-        setErrores({});
+        try {
+            await crearReserva(nueva);
+            setConfirmacion(
+                `Reserva de "${recursoSeleccionado.nombre}" registrada correctamente.`
+            );
+            setErrores({});
+        } catch (fallo) {
+            toast.error(fallo?.message || "No se pudo registrar la reserva.");
+        }
     };
 
-    const cancelarReserva = (id) => {
+    const cancelarReserva = async (reserva) => {
         if (!window.confirm("¿Estás seguro de que deseas cancelar esta reserva?")) return;
-        setMisReservas((prev) => {
-            const actualizadas = prev.map((reserva) =>
-                reserva.id === id ? { ...reserva, estado: "Cancelada" } : reserva
-            );
-            guardarReservas(actualizadas);
-            return actualizadas;
-        });
+        try {
+            await cancelarReservaEnApi(reserva);
+            toast.info("Reserva cancelada.");
+        } catch (fallo) {
+            toast.error(fallo?.message || "No se pudo cancelar la reserva.");
+        }
     };
 
     const buscarRecursos = () => {
@@ -212,7 +228,7 @@ function Reservas() {
                     .filter(Boolean)
             )
         ];
-    }, []);
+    }, [recursos]);
 
     const fechaReferencia = new Date(`${fecha || hoyStr}T00:00:00`);
     const inicioSemana = new Date(fechaReferencia);
@@ -221,7 +237,7 @@ function Reservas() {
     const misReservasFiltradas = useMemo(() => {
         if (!user) return misReservas;
         return misReservas.filter(
-            (r) => r.usuarioId === user.id || r.usuarioId == null
+            (r) => r.id_usuario === user.id || r.id_usuario == null
         );
     }, [misReservas, user]);
 
@@ -230,8 +246,8 @@ function Reservas() {
         () =>
             [...misReservasFiltradas].sort(
                 (a, b) =>
-                    new Date(b.fecha + "T" + (b.horaInicio || "00:00")) -
-                    new Date(a.fecha + "T" + (a.horaInicio || "00:00"))
+                    new Date(b.fecha + "T" + (b.hora_inicio || "00:00")) -
+                    new Date(a.fecha + "T" + (a.hora_inicio || "00:00"))
             ),
         [misReservasFiltradas]
     );
@@ -252,6 +268,22 @@ function Reservas() {
                     <p>Reserva espacios y recursos disponibles del campus.</p>
                 </div>
             </div>
+
+            {(enLinea === false || enLineaRecursos === false) && (
+                <div className="toast toast--error">
+                    <Icon name="info" size={14} />
+                    Sin conexión con el servidor: se muestra la última data sincronizada.
+                    <button
+                        className="button button--ghost button--sm"
+                        onClick={() => {
+                            recargar();
+                            recargarRecursos();
+                        }}
+                    >
+                        Reintentar
+                    </button>
+                </div>
+            )}
 
             <div className="filters">
                 <div className="filters__grid">
@@ -279,10 +311,9 @@ function Reservas() {
                             onChange={(e) => setTipo(e.target.value)}
                         >
                             <option>Todos</option>
-                            <option>Salas</option>
-                            <option>Laboratorios</option>
-                            <option>Auditorios</option>
-                            <option>Equipos</option>
+                            {TIPOS_RECURSO.map((valor) => (
+                                <option key={valor}>{valor}</option>
+                            ))}
                         </select>
                     </div>
 
@@ -395,7 +426,14 @@ function Reservas() {
                                     key={reserva.id}
                                 >
                                     <div className="reservas__reservation-icon">
-                                        <Icon name={reserva.recurso.includes("Laboratorio") ? "recursos" : "reservas"} size={17} />
+                                        <Icon
+                                            name={
+                                                reserva.tipo_recurso === "Laboratorios"
+                                                    ? "recursos"
+                                                    : "reservas"
+                                            }
+                                            size={17}
+                                        />
                                     </div>
 
                                     <div className="reservas__reservation-info">
@@ -411,17 +449,17 @@ function Reservas() {
                                             </span>
                                             <span>
                                                 <Icon name="eventos" size={10} />
-                                                {formatearHora(reserva.horaInicio)} - {formatearHora(reserva.horaFin)}
+                                                {formatearHora(reserva.hora_inicio)} - {formatearHora(reserva.hora_fin)}
                                             </span>
                                             <span>
                                                 <Icon name="solicitudes" size={10} />
-                                                {reserva.proposito}
+                                                {reserva.motivo}
                                             </span>
                                         </div>
                                     </div>
 
                                     <span className={`reservas__reservation-status ${ESTADO_CLASE[reserva.estado] || "pending"}`}>
-                                        {reserva.estado.toUpperCase()}
+                                        {String(reserva.estado || "").toUpperCase()}
                                     </span>
 
                                     {!esPasada && reserva.estado !== "Cancelada" && (
@@ -430,7 +468,7 @@ function Reservas() {
                                                 type="button"
                                                 className="reservas__action-button reservas__action-button--delete"
                                                 title="Cancelar reserva"
-                                                onClick={() => cancelarReserva(reserva.id)}
+                                                onClick={() => cancelarReserva(reserva)}
                                             >
                                                 <Icon name="eventos" size={13} />
                                             </button>
@@ -481,12 +519,12 @@ function Reservas() {
                                 </div>
                                 {reservasDia.map((r) => (
                                     <div
-                                        className={`reservas__calendar-event${r.recurso.includes("Laboratorio") ? " reservas__calendar-event--green" : r.recurso.includes("Auditorio") ? " reservas__calendar-event--purple" : ""}`}
+                                        className={`reservas__calendar-event${r.tipo_recurso === "Laboratorios" ? " reservas__calendar-event--green" : r.tipo_recurso === "Auditorios" ? " reservas__calendar-event--purple" : ""}`}
                                         key={r.id}
                                     >
                                         {r.recurso}
                                         <br />
-                                        {formatearHora(r.horaInicio)} - {formatearHora(r.horaFin)}
+                                        {formatearHora(r.hora_inicio)} - {formatearHora(r.hora_fin)}
                                     </div>
                                 ))}
                             </div>
@@ -550,13 +588,13 @@ function Reservas() {
                                 <Input
                                     label="Hora inicio"
                                     type="time"
-                                    name="horaInicio"
-                                    value={form.horaInicio}
+                                    name="hora_inicio"
+                                    value={form.hora_inicio}
                                     onChange={handleChange}
                                     id="reserva-inicio"
                                 />
-                                {errores.horaInicio && (
-                                    <span className="reservas__error">{errores.horaInicio}</span>
+                                {errores.hora_inicio && (
+                                    <span className="reservas__error">{errores.hora_inicio}</span>
                                 )}
                             </div>
 
@@ -564,13 +602,13 @@ function Reservas() {
                                 <Input
                                     label="Hora fin"
                                     type="time"
-                                    name="horaFin"
-                                    value={form.horaFin}
+                                    name="hora_fin"
+                                    value={form.hora_fin}
                                     onChange={handleChange}
                                     id="reserva-fin"
                                 />
-                                {errores.horaFin && (
-                                    <span className="reservas__error">{errores.horaFin}</span>
+                                {errores.hora_fin && (
+                                    <span className="reservas__error">{errores.hora_fin}</span>
                                 )}
                             </div>
                         </div>
@@ -578,9 +616,9 @@ function Reservas() {
                         <Input
                             label="Propósito"
                             type="text"
-                            name="proposito"
+                            name="motivo"
                             placeholder="Describe el propósito de la reserva"
-                            value={form.proposito}
+                            value={form.motivo}
                             onChange={handleChange}
                             id="reserva-proposito"
                         />
@@ -603,7 +641,7 @@ function Reservas() {
                             <button
                                 className="reservas__confirm-button reservas__confirm-button--primary"
                                 type="submit"
-                                disabled={!form.fecha || !form.horaInicio || !form.horaFin}
+                                disabled={!form.fecha || !form.hora_inicio || !form.hora_fin}
                             >
                                 Confirmar reserva
                             </button>

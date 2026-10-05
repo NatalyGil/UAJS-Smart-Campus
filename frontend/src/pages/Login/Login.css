@@ -157,6 +157,7 @@
     font-weight: 800;
     letter-spacing: -2px;
     margin-bottom: 25px;
+    color: #fff;
 }
 
 .login__title span {
@@ -188,8 +189,79 @@
 }
 
 /* ============================================================
-   Panel derecho — Formulario
-   ============================================================ */
+    Panel derecho — Formulario
+    ============================================================ */
+
+/* Header del formulario (usado en Recuperar) */
+.login__form-header {
+    margin-bottom: 24px;
+}
+
+.login__form-header h2 {
+    margin: 0 0 4px;
+    font-family: var(--font-heading);
+    font-size: 27px;
+    font-weight: 800;
+    color: var(--color-primary-800);
+}
+
+.login__form-header p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+}
+
+/* Mensaje de éxito (usado en Recuperar) */
+.login__success {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #065f46;
+    background: #ecfdf5;
+    border-left: 4px solid #059669;
+    border-radius: 8px;
+}
+
+.login__success svg {
+    flex-shrink: 0;
+    color: #059669;
+}
+
+.login__success span {
+    flex: 1;
+    line-height: 1.5;
+}
+
+/* Enlace "Volver al inicio de sesión" (usado en Recuperar) */
+.login__back-link {
+    margin-top: 24px;
+    text-align: center;
+}
+
+.login__back-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-primary-600);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.login__back-link a:hover {
+    color: var(--color-accent-dark);
+    text-decoration: underline;
+}
+
+.login__back-link svg {
+    flex-shrink: 0;
+}
 .login__panel {
     display: grid;
     place-items: center;
@@ -600,6 +672,10 @@
     }
 
     .login__heading {
+        font-size: 21px;
+    }
+
+    .login__form-header h2 {
         font-size: 21px;
     }
 

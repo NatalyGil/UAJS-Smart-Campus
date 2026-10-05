@@ -428,7 +428,10 @@ services:
     restart: unless-stopped
 
     environment:
-      VITE_API_URL: http://localhost:3000/api
+      # El navegador recibe rutas relativas y el proxy de Vite las resuelve.
+      VITE_API_URL: /api
+      # Dentro de la red de Docker el gateway se llama "gateway", no "localhost".
+      VITE_PROXY_TARGET: http://gateway:3000
       NODE_ENV: development
 
     ports:

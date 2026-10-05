@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthContext } from "./auth-context";
-import { permisosDeRol, accionesDeRol, obtenerUsuarios } from "../utils/users";
+import { permisosDeRol, accionesDeRol } from "../utils/users";
+import { authApi } from "../utils/api";
+import { mapearUsuarioSesion } from "../utils/mapeo";
 import Modal from "../components/Modal/Modal";
 import "../components/Modal/Modal.css";
 import "./session-warning.css";
@@ -34,26 +36,13 @@ function AuthProvider({ children }) {
 
     const login = async (identificacion, password) => {
         try {
-            const usuario = obtenerUsuarios().find(
-                (u) =>
-                    (u.cedula === identificacion ||
-                        u.usuario === identificacion) &&
-                    u.password === password
-            );
+            const data = await authApi.login(identificacion, password);
 
-            if (!usuario) {
-                throw new Error("Credenciales inválidas");
+            if (!data?.token) {
+                throw new Error("El servidor no devolvió un token de sesión.");
             }
 
-            const sesion = {
-                id: usuario.id,
-                usuario: usuario.usuario,
-                nombre: usuario.nombre || "Usuario",
-                correo: usuario.correo || "",
-                rol: usuario.rol,
-                programa: usuario.programa || "No especificado",
-                token: "mock-token-" + btoa(usuario.usuario),
-            };
+            const sesion = mapearUsuarioSesion(data);
 
             setUser(sesion);
 
@@ -81,6 +70,29 @@ function AuthProvider({ children }) {
             // Si localStorage no está disponible se ignora
         }
     };
+
+    // El cliente HTTP avisa con este evento cuando el gateway responde 401
+    // (token ausente o expirado). Se cierra la sesión para no dejar la UI
+    // mostrando datos que ya no puede sincronizar.
+    useEffect(() => {
+        const onSesionExpirada = () => {
+            setUser((prev) => {
+                // Un 401 durante el propio login no debe cerrar nada: ahí
+                // todavía no hay sesión que invalidar.
+                if (prev) {
+                    try {
+                        localStorage.removeItem(SESSION_KEY);
+                    } catch {
+                        // sin localStorage no hay nada que limpiar
+                    }
+                }
+                return null;
+            });
+        };
+        window.addEventListener("uajs:sesion-expirada", onSesionExpirada);
+        return () =>
+            window.removeEventListener("uajs:sesion-expirada", onSesionExpirada);
+    }, []);
 
     /**
      * Actualiza campos del usuario en sesión (en memoria y en localStorage).
@@ -149,8 +161,20 @@ function SessionGuard({ onLogout }) {
     const idleTimerRef = useRef(null);
     const warningTimerRef = useRef(null);
     const countdownRef = useRef(null);
+    // Espejo de warningOpen para que los listeners (registrados una sola vez)
+    // no dependan de un closure congelado en el primer render.
+    const warningOpenRef = useRef(false);
+    const onLogoutRef = useRef(onLogout);
 
-    const limpiarTimers = () => {
+    // Espejos de estado/props actualizados en un efecto (sin deps: en cada
+    // commit) para que los listeners registrados una sola vez lean el valor
+    // vigente sin depender de un closure congelado en el primer render.
+    useEffect(() => {
+        warningOpenRef.current = warningOpen;
+        onLogoutRef.current = onLogout;
+    });
+
+    const limpiarTimers = useCallback(() => {
         if (idleTimerRef.current) {
             clearTimeout(idleTimerRef.current);
             idleTimerRef.current = null;
@@ -163,34 +187,39 @@ function SessionGuard({ onLogout }) {
             clearInterval(countdownRef.current);
             countdownRef.current = null;
         }
-    };
+    }, []);
 
-    const iniciarAdvertencia = () => {
+    const iniciarAdvertencia = useCallback(() => {
         setRemaining(WARNING_COUNTDOWN_MS);
         countdownRef.current = setInterval(() => {
             setRemaining((prev) => Math.max(0, prev - 1000));
         }, 1000);
         warningTimerRef.current = setTimeout(() => {
             limpiarTimers();
-            onLogout();
+            onLogoutRef.current();
         }, WARNING_COUNTDOWN_MS);
-    };
+    }, [limpiarTimers]);
 
-    const reiniciarInactividad = () => {
+    const reiniciarInactividad = useCallback(() => {
         limpiarTimers();
-        if (warningOpen) {
-            setWarningOpen(false);
-        }
         idleTimerRef.current = setTimeout(() => {
             setWarningOpen(true);
             iniciarAdvertencia();
         }, IDLE_BEFORE_WARNING_MS);
-    };
+    }, [limpiarTimers, iniciarAdvertencia]);
 
     useEffect(() => {
-        reiniciarInactividad();
+        idleTimerRef.current = setTimeout(() => {
+            setWarningOpen(true);
+            iniciarAdvertencia();
+        }, IDLE_BEFORE_WARNING_MS);
+
+        // Mientras el aviso está abierto no se reinicia nada: cualquier
+        // mousemove lo cerraría al instante y el aviso nunca sería leído.
+        // La sesión solo se prolonga con los botones del modal.
         const onActivity = () => {
-            if (!warningOpen) reiniciarInactividad();
+            if (warningOpenRef.current) return;
+            reiniciarInactividad();
         };
         ACTIVITY_EVENTS.forEach((evt) =>
             window.addEventListener(evt, onActivity, { passive: true })
@@ -201,16 +230,17 @@ function SessionGuard({ onLogout }) {
                 window.removeEventListener(evt, onActivity)
             );
         };
-    }, []);
+    }, [limpiarTimers, reiniciarInactividad, iniciarAdvertencia]);
 
     const prolongar = () => {
         setWarningOpen(false);
+        setRemaining(WARNING_COUNTDOWN_MS);
         reiniciarInactividad();
     };
 
     const cerrarSesionAhora = () => {
         limpiarTimers();
-        onLogout();
+        onLogoutRef.current();
     };
 
     const minutos = Math.floor(remaining / 60000);

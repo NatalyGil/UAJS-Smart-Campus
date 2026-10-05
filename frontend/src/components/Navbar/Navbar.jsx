@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { obtenerNotificaciones, STORAGE_KEY } from "../../utils/notificaciones";
+import { obtenerNotificaciones } from "../../utils/notificaciones";
 import { getModuleName } from "../../utils/menu";
 import useAuth from "../../context/useAuth";
 import { useTheme } from "../../context/ThemeContext";

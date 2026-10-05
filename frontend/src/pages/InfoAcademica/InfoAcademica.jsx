@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import useAuth from "../../context/useAuth";
 import Icon from "../../components/Icon/Icon";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
+import useColeccion from "../../hooks/useColeccion";
 import {
     CATEGORIAS,
     CATEGORIA_ICONO,
@@ -10,8 +11,11 @@ import {
     ESTADO_CLASE,
     PROGRAMAS,
     formVacio,
+    CLAVE_COLECCION,
     obtenerPublicaciones,
-    guardarPublicaciones,
+    crearPublicacion,
+    actualizarPublicacion,
+    eliminarPublicacion,
     aplicarVencimiento
 } from "../../utils/infoAcademica";
 import "./InfoAcademica.css";
@@ -21,26 +25,35 @@ const HOY = new Date().toISOString().slice(0, 10);
 function InfoAcademica() {
     const { user, puede } = useAuth();
     const puedePublicar = puede("publicar_info_academica");
+    const { items: remotas, enLinea } = useColeccion(CLAVE_COLECCION);
 
     const [query,        setQuery]        = useState("");
     const [busqueda,     setBusqueda]     = useState("");
     const [categoria,    setCategoria]    = useState("");
-    const [items,        setItems]        = useState(() => {
-        // Al cargar: transitar Aprobada → Vencida si la fecha de vigencia ya pasó
-        const { lista, huboCambios } = aplicarVencimiento(obtenerPublicaciones());
-        if (huboCambios) guardarPublicaciones(lista);
-        return lista;
-    });
     const [crearAbierto, setCrearAbierto] = useState(false);
     const [confirm,       setConfirm]      = useState(null);
     const [form,          setForm]         = useState(formVacio);
     const [errores,      setErrores]      = useState({});
     const [aviso,        setAviso]        = useState("");
+    const [errorAviso,   setErrorAviso]   = useState("");
+
+    // Al cargar: transitar Aprobada → Vencida si la fecha de vigencia ya pasó.
+    // Con la API conectada, `estado` no se persiste (el academic-info-service
+    // no lo acepta), así que la transición se aplica solo en memoria.
+    const items = useMemo(() => {
+        const base = remotas.length > 0 || enLinea ? remotas : obtenerPublicaciones();
+        return aplicarVencimiento(base).lista;
+    }, [remotas, enLinea]);
 
     // ── Helpers ──────────────────────────────────────────────
     const mostrarAviso = (msg) => {
         setAviso(msg);
         setTimeout(() => setAviso(""), 3000);
+    };
+
+    const mostrarError = (msg) => {
+        setErrorAviso(msg);
+        setTimeout(() => setErrorAviso(""), 4000);
     };
 
     const normalizar = (texto) =>
@@ -107,12 +120,11 @@ function InfoAcademica() {
         return Object.keys(err).length === 0;
     };
 
-    const handleCrear = (e) => {
+    const handleCrear = async (e) => {
         e.preventDefault();
         if (!validar()) return;
 
         const nueva = {
-            id: Date.now(),
             fecha: HOY,
             autor: user?.nombre ?? "Usuario",
             estado: "Pendiente",
@@ -120,46 +132,49 @@ function InfoAcademica() {
             vigencia: form.tipoVigencia === "Hasta" ? form.vigencia : ""
         };
 
-        const actualizadas = [nueva, ...items];
-        setItems(actualizadas);
-        guardarPublicaciones(actualizadas);
-        setCrearAbierto(false);
-        setForm(formVacio);
-        setErrores({});
-        mostrarAviso("Publicación creada correctamente.");
+        try {
+            await crearPublicacion(nueva);
+            setCrearAbierto(false);
+            setForm(formVacio);
+            setErrores({});
+            mostrarAviso("Publicación creada correctamente.");
+        } catch (error) {
+            mostrarError(error.message || "No se pudo crear la publicación.");
+        }
     };
 
-    const cambiarEstado = (id, nuevoEstado) => {
-        const actualizadas = items.map((i) =>
-            i.id === id ? { ...i, estado: nuevoEstado } : i
-        );
-        setItems(actualizadas);
-        guardarPublicaciones(actualizadas);
-        mostrarAviso(`Publicación ${nuevoEstado.toLowerCase()}.`);
+    const cambiarEstado = async (item, nuevoEstado) => {
+        try {
+            await actualizarPublicacion(item, { estado: nuevoEstado });
+            mostrarAviso(`Publicación ${nuevoEstado.toLowerCase()}.`);
+        } catch (error) {
+            mostrarError(error.message || "No se pudo actualizar la publicación.");
+        }
     };
 
-    const eliminarPublicacion = (id) => {
-        const actualizadas = items.filter((i) => i.id !== id);
-        setItems(actualizadas);
-        guardarPublicaciones(actualizadas);
-        mostrarAviso("Publicación eliminada.");
+    const quitarPublicacion = async (item) => {
+        try {
+            await eliminarPublicacion(item);
+            mostrarAviso("Publicación eliminada.");
+        } catch (error) {
+            mostrarError(error.message || "No se pudo eliminar la publicación.");
+        }
     };
 
     // ── Confirmaciones ────────────────────────────────────────
-    const pedirConfirmarAprobar = (id, titulo) =>
-        setConfirm({ tipo: "aprobar", id, titulo });
-    const pedirConfirmarRechazar = (id, titulo) =>
-        setConfirm({ tipo: "rechazar", id, titulo });
-    const pedirConfirmarEliminar = (id, titulo) =>
-        setConfirm({ tipo: "eliminar", id, titulo });
+    const pedirConfirmarAprobar = (item) =>
+        setConfirm({ tipo: "aprobar", item });
+    const pedirConfirmarRechazar = (item) =>
+        setConfirm({ tipo: "rechazar", item });
+    const pedirConfirmarEliminar = (item) =>
+        setConfirm({ tipo: "eliminar", item });
 
-    const confirmarAccion = () => {
+    const confirmarAccion = async () => {
         if (!confirm) return;
-        const { tipo, id } = confirm;
-        if (tipo === "aprobar") cambiarEstado(id, "Aprobada");
-        else if (tipo === "rechazar") cambiarEstado(id, "Rechazada");
-        else if (tipo === "eliminar") eliminarPublicacion(id);
+        const { tipo, item } = confirm;
         setConfirm(null);
+        if (tipo === "eliminar") await quitarPublicacion(item);
+        else await cambiarEstado(item, tipo === "aprobar" ? "Aprobada" : "Rechazada");
     };
 
     const cerrar = () => {
@@ -195,6 +210,20 @@ function InfoAcademica() {
                 <div className="toast toast--success">
                     <Icon name="info" size={14} />
                     {aviso}
+                </div>
+            )}
+
+            {errorAviso && (
+                <div className="toast toast--error">
+                    <Icon name="info" size={14} />
+                    {errorAviso}
+                </div>
+            )}
+
+            {!enLinea && (
+                <div className="toast toast--error">
+                    <Icon name="info" size={14} />
+                    No se pudo sincronizar con el servidor. Se muestran los datos locales.
                 </div>
             )}
 
@@ -343,7 +372,7 @@ function InfoAcademica() {
                                             <button
                                                 type="button"
                                                 className="info-ac__action info-ac__action--approve"
-                                                onClick={() => pedirConfirmarAprobar(item.id, item.titulo)}
+                                                onClick={() => pedirConfirmarAprobar(item)}
                                             >
                                                 Aprobar
                                             </button>
@@ -352,7 +381,7 @@ function InfoAcademica() {
                                             <button
                                                 type="button"
                                                 className="info-ac__action info-ac__action--reject"
-                                                onClick={() => pedirConfirmarRechazar(item.id, item.titulo)}
+                                                onClick={() => pedirConfirmarRechazar(item)}
                                             >
                                                 Rechazar
                                             </button>
@@ -360,7 +389,7 @@ function InfoAcademica() {
                                         <button
                                             type="button"
                                             className="info-ac__action info-ac__action--delete"
-                                            onClick={() => pedirConfirmarEliminar(item.id, item.titulo)}
+                                            onClick={() => pedirConfirmarEliminar(item)}
                                         >
                                             Eliminar
                                         </button>
@@ -515,10 +544,10 @@ function InfoAcademica() {
                 message={
                     confirm
                         ? confirm.tipo === "eliminar"
-                            ? `¿Eliminar la publicación "${confirm.titulo}"? Esta acción no se puede deshacer.`
+                            ? `¿Eliminar la publicación "${confirm.item.titulo}"? Esta acción no se puede deshacer.`
                             : confirm.tipo === "aprobar"
-                            ? `¿Aprobar la publicación "${confirm.titulo}"? Será visible para toda la comunidad.`
-                            : `¿Rechazar la publicación "${confirm.titulo}"? No aparecerá en el tablero para los demás usuarios.`
+                            ? `¿Aprobar la publicación "${confirm.item.titulo}"? Será visible para toda la comunidad.`
+                            : `¿Rechazar la publicación "${confirm.item.titulo}"? No aparecerá en el tablero para los demás usuarios.`
                         : ""
                 }
                 confirmText={

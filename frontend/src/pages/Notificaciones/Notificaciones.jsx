@@ -1,15 +1,26 @@
 import { useState } from "react";
 import Icon from "../../components/Icon/Icon";
-import useAuth from "../../context/useAuth";
-import { obtenerNotificacionesPorPerfil, guardarNotificaciones } from "../../utils/notificaciones";
+import useColeccion from "../../hooks/useColeccion";
+import {
+    CLAVE_COLECCION,
+    obtenerNotificaciones,
+    marcarLeida,
+    marcarTodasLeidas
+} from "../../utils/notificaciones";
 import "./Notificaciones.css";
 
 const TIPOS = ["Todas", "Solicitud", "Reserva", "Evento", "PQRS"];
 
 function Notificaciones() {
-    const { user } = useAuth();
-    const [items, setItems] = useState(() => obtenerNotificacionesPorPerfil(user?.rol));
+    const { items: remotas, enLinea } = useColeccion(CLAVE_COLECCION);
     const [filtro, setFiltro] = useState("Todas");
+    const [errorAviso, setErrorAviso] = useState("");
+    const [enviando, setEnviando] = useState(false);
+
+    // La API ya devuelve solo las notificaciones del usuario en sesión, así
+    // que no hace falta filtrar por perfil. Mientras el backend no responde
+    // se pintan los datos precargados para no dejar la vista vacía.
+    const items = remotas.length > 0 || enLinea ? remotas : obtenerNotificaciones();
 
     const noLeidas = items.filter((item) => !item.leida).length;
 
@@ -21,33 +32,38 @@ function Notificaciones() {
     const conteoTipo = (tipo) =>
         tipo === "Todas" ? items.length : items.filter((i) => i.tipo === tipo).length;
 
-    const marcarLeida = (id) => {
-        setItems((prev) => {
-            const nueva = prev.map((item) => (item.id === id ? { ...item, leida: true } : item));
-            guardarNotificaciones(nueva);
-            return nueva;
-        });
+    const mostrarError = (texto) => {
+        setErrorAviso(texto);
+        setTimeout(() => setErrorAviso(""), 4000);
     };
 
-    const marcarTodasLeidas = () => {
-        setItems((prev) => {
-            const nueva = prev.map((item) => ({ ...item, leida: true }));
-            guardarNotificaciones(nueva);
-            return nueva;
-        });
+    const manejarMarcarLeida = async (item) => {
+        try {
+            await marcarLeida(item);
+        } catch (error) {
+            mostrarError(error.message || "No se pudo marcar la notificación como leída.");
+        }
+    };
+
+    const manejarTodasLeidas = async () => {
+        setEnviando(true);
+        try {
+            await marcarTodasLeidas();
+        } catch (error) {
+            mostrarError(error.message || "No se pudieron marcar las notificaciones como leídas.");
+        } finally {
+            setEnviando(false);
+        }
     };
 
     const nuevaNoLeida = (item) => {
-        try {
-            const dias = Math.floor(
-                (new Date() - new Date(item.fecha + "T00:00:00")) / 86400000
-            );
-            if (dias <= 0) return "Hoy";
-            if (dias === 1) return "Ayer";
-            return `Hace ${dias} días`;
-        } catch {
-            return "";
-        }
+        if (!item.fecha) return "";
+        const fecha = new Date(String(item.fecha).slice(0, 10) + "T00:00:00");
+        if (isNaN(fecha)) return "";
+        const dias = Math.floor((new Date() - fecha) / 86400000);
+        if (dias <= 0) return "Hoy";
+        if (dias === 1) return "Ayer";
+        return `Hace ${dias} días`;
     };
 
     return (
@@ -59,13 +75,20 @@ function Notificaciones() {
 
                 <button
                     className="button button--outline button--md"
-                    onClick={marcarTodasLeidas}
-                    disabled={noLeidas === 0}
+                    onClick={manejarTodasLeidas}
+                    disabled={noLeidas === 0 || enviando}
                 >
                     <Icon name="notificaciones" size={14} />
                     Marcar todas como leídas
                 </button>
             </div>
+
+            {errorAviso && (
+                <div className="toast toast--error">
+                    <Icon name="info" size={14} />
+                    {errorAviso}
+                </div>
+            )}
 
             <div className="summary">
                 {TIPOS.map((tipo) => (
@@ -135,7 +158,7 @@ function Notificaciones() {
                                 {!item.leida ? (
                                     <button
                                         className="notifs__read-button"
-                                        onClick={() => marcarLeida(item.id)}
+                                        onClick={() => manejarMarcarLeida(item)}
                                     >
                                         Marcar leída
                                     </button>

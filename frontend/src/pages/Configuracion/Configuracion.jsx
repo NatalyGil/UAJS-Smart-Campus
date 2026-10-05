@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useAuth from "../../context/useAuth";
 import { useTheme } from "../../context/ThemeContext";
 import useFontSize from "../../hooks/useFontSize";
+import useColeccion from "../../hooks/useColeccion";
 import Icon from "../../components/Icon/Icon";
+import { configurationApi } from "../../utils/api";
 import {
     getPhotoByUserId,
     savePhotoByUserId,
@@ -12,6 +14,10 @@ import "./Configuracion.css";
 
 const STORAGE_KEY = "uajs_config";
 
+export const CLAVE_CONFIGURACION = "configuracion";
+
+// La tabla `configuracion` tiene una fila por (id_usuario, seccion) y guarda
+// `valor` como JSON; el configuration-service ya devuelve el valor parseado.
 const SECCIONES = [
     { id: "cuenta", icon: "perfil", titulo: "Cuenta" },
     { id: "seguridad", icon: "configuracion", titulo: "Seguridad" },
@@ -21,6 +27,11 @@ const SECCIONES = [
     { id: "privacidad", icon: "info", titulo: "Privacidad" },
     { id: "zona-peligro", icon: "recursos", titulo: "Zona de peligro" }
 ];
+
+// Secciones que se sincronizan con el backend. "zona-peligro" es solo UI.
+const SECCIONES_SINCRONIZABLES = SECCIONES
+    .map((item) => item.id)
+    .filter((id) => id !== "zona-peligro");
 
 const MODULOS_NOTIFICACION = [
     { id: "solicitudes", etiqueta: "Solicitudes" },
@@ -147,6 +158,9 @@ function Configuracion() {
     const { user, logout, updateUser } = useAuth();
     const { tema, setTema } = useTheme();
     const { levels, level, setLevel } = useFontSize();
+    const { items: remotas, recargar: recargarConfig } = useColeccion(CLAVE_CONFIGURACION);
+
+    const [errorConfig, setErrorConfig] = useState("");
 
     const [config, setConfig] = useState(() => {
         try {
@@ -186,6 +200,8 @@ function Configuracion() {
     const [seccion, setSeccion] = useState("cuenta");
     const [guardado, setGuardado] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    // Usuario al que ya se le aplicó la configuración que llegó del backend.
+    const [configAplicadaPara, setConfigAplicadaPara] = useState(null);
 
     // Estado local del formulario de cuenta (se sincroniza con config.cuenta al guardar)
     const [correoEditable, setCorreoEditable] = useState(
@@ -220,6 +236,123 @@ function Configuracion() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     }, [config]);
 
+    // ── Sincronización con el configuration-service ──────────
+    // Cada sección se guarda como una fila de `configuracion`
+    // (UNIQUE id_usuario + seccion) con el valor en JSON.
+    const configRef = useRef(config);
+    const filasRef = useRef(remotas);
+    const idUsuarioRef = useRef(user?.id);
+    const pendientesRef = useRef(new Set());
+    const timerRef = useRef(null);
+
+    // Los refs se actualizan en un efecto (sin deps: en cada commit) y no
+    // durante el render: escribir un ref mientras se renderiza puede dejar el
+    // valor desincronizado si React descarta el render.
+    useEffect(() => {
+        configRef.current = config;
+        filasRef.current = remotas;
+        idUsuarioRef.current = user?.id;
+    });
+
+    // La foto de perfil es un dataURL: pesa demasiado para la columna TEXT y
+    // sigue living en `uajs_foto_${id}`, así que no viaja al backend.
+    const valorParaBackend = (seccion, valor) => {
+        if (seccion !== "cuenta") return valor;
+        const resto = { ...(valor || {}) };
+        delete resto.foto;
+        return resto;
+    };
+
+    const volcarPendientes = useCallback(async () => {
+        const pendientes = [...pendientesRef.current];
+        pendientesRef.current.clear();
+        const idUsuario = idUsuarioRef.current;
+        if (!pendientes.length || !idUsuario) return;
+
+        try {
+            for (const nombre of pendientes) {
+                const valor = valorParaBackend(nombre, configRef.current?.[nombre]);
+                if (valor === undefined) continue;
+                const existente = filasRef.current.find(
+                    (fila) => fila.seccion === nombre
+                );
+                const payload = {
+                    id_usuario: idUsuario,
+                    seccion: nombre,
+                    valor
+                };
+                if (existente) {
+                    await configurationApi.update(existente.id, payload);
+                } else {
+                    await configurationApi.create(payload);
+                }
+            }
+            setErrorConfig("");
+            await recargarConfig();
+        } catch (error) {
+            setErrorConfig(
+                error.message || "No se pudieron guardar los cambios en el servidor."
+            );
+        }
+    }, [recargarConfig]);
+
+    const programarGuardado = useCallback((secciones) => {
+        const lista = Array.isArray(secciones) ? secciones : [secciones];
+        lista
+            .filter((nombre) => SECCIONES_SINCRONIZABLES.includes(nombre))
+            .forEach((nombre) => pendientesRef.current.add(nombre));
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+            volcarPendientes();
+        }, 700);
+    }, [volcarPendientes]);
+
+    // Limpia el temporizador si la pantalla se desmonta antes del volcado.
+    useEffect(() => () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+    }, []);
+
+    // Mezcla la configuración que llega del backend sobre los valores por
+    // defecto. Solo se aplica una vez por usuario para no pisar lo que el
+    // usuario está editando en ese momento.
+    //
+    // Se ajusta durante el render (patrón oficial de React para derivar estado
+    // de props) en lugar de dentro de un efecto: el efecto provocaba un render
+    // en cascada y, con StrictMode, una doble ejecución.
+    const idUsuarioActual = user?.id ?? null;
+    if (configAplicadaPara !== idUsuarioActual && remotas.length) {
+        setConfigAplicadaPara(idUsuarioActual);
+
+        const porSeccion = {};
+        remotas.forEach((fila) => {
+            if (fila?.seccion) porSeccion[fila.seccion] = fila.valor;
+        });
+
+        const base = {
+            ...configBase,
+            cuenta: {
+                ...configBase.cuenta,
+                ...porSeccion.cuenta,
+                foto: config.cuenta?.foto || ""
+            }
+        };
+        const mergeado = normalizarConfiguracion(base, {
+            ...porSeccion,
+            cuenta: porSeccion.cuenta
+        });
+        // El correo de la sesión es la fuente de verdad del perfil.
+        mergeado.cuenta = {
+            ...mergeado.cuenta,
+            correo: config.cuenta?.correo || user?.correo || ""
+        };
+
+        setConfig({ ...config, ...mergeado, cuenta: mergeado.cuenta });
+        if (!correoEditable) setCorreoEditable(user?.correo || "");
+        if (!telefonoEditable) {
+            setTelefonoEditable(porSeccion.cuenta?.telefono || "");
+        }
+    }
+
     // Auto-ocultar el aviso de guardado
     useEffect(() => {
         let timer;
@@ -229,7 +362,11 @@ function Configuracion() {
         return () => clearTimeout(timer);
     }, [guardado]);
 
-    const marcarGuardado = () => setGuardado(true);
+    const marcarGuardado = (...secciones) => {
+        setGuardado(true);
+        setErrorConfig("");
+        programarGuardado(secciones);
+    };
 
     const cambiar = (ruta) => (e) => {
         setConfig((prev) => {
@@ -243,7 +380,7 @@ function Configuracion() {
                 e.target.type === "checkbox" ? e.target.checked : e.target.value;
             return copia;
         });
-        marcarGuardado();
+        marcarGuardado(ruta.split(".")[0]);
     };
 
     const alternar = (ruta) => () => {
@@ -257,7 +394,7 @@ function Configuracion() {
             obj[partes[partes.length - 1]] = !obj[partes[partes.length - 1]];
             return copia;
         });
-        marcarGuardado();
+        marcarGuardado(ruta.split(".")[0]);
     };
 
     // Guardar cuenta: persiste correo y teléfono en config.cuenta
@@ -271,7 +408,8 @@ function Configuracion() {
                 telefono: telefonoEditable.trim()
             }
         }));
-        marcarGuardado();
+        updateUser({ correo: correoEditable.trim() });
+        marcarGuardado("cuenta");
     };
 
     const manejarFoto = (event) => {
@@ -343,7 +481,11 @@ function Configuracion() {
     // Selector de tema (conectado al ThemeContext)
     const aplicarTema = (valor) => {
         setTema(valor);
-        marcarGuardado();
+        setConfig((prev) => ({
+            ...prev,
+            apariencia: { ...prev.apariencia, tema: valor }
+        }));
+        marcarGuardado("apariencia");
     };
 
     const temas = [
@@ -374,7 +516,7 @@ function Configuracion() {
     const cancelarConfirmacion = () => setConfirmando(null);
 
     // Cerrar sesión individual en un dispositivo
-    const cerrarSesionDispositivo = (dispositivo) => {
+    const cerrarSesionDispositivo = () => {
         // Simulación: en producción llamaría a /api/auth/sessions DELETE
         marcarGuardado();
     };
@@ -386,10 +528,16 @@ function Configuracion() {
                     <p>Controla cómo funciona tu cuenta y tus preferencias.</p>
                 </div>
 
-                {guardado && (
+                {guardado && !errorConfig && (
                     <span className="badge badge--green">
                         <Icon name="info" size={12} />
                         Cambios guardados
+                    </span>
+                )}
+                {errorConfig && (
+                    <span className="badge badge--red" role="alert">
+                        <Icon name="solicitudes" size={12} />
+                        {errorConfig}
                     </span>
                 )}
             </div>

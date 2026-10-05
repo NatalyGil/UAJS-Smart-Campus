@@ -4,11 +4,13 @@ import useAuth from "../../context/useAuth";
 import BrandLogo from "../../components/BrandLogo/BrandLogo";
 import "./Login.css";
 
+// Credenciales de prueba. `identificacion` es la columna que valida
+// auth-service contra la tabla usuarios, no la cédula.
 const CREDENCIALES = [
-    { rol: "Administrador", user: "1023456789", pass: "admin123", color: "#d32f2f" },
-    { rol: "Funcionario", user: "1023456788", pass: "func123", color: "#1976d2" },
-    { rol: "Docente", user: "1023456787", pass: "prof123", color: "#388e3c" },
-    { rol: "Estudiante", user: "1023456786", pass: "est123", color: "#f57c00" },
+    { rol: "Administrador", user: "admin", pass: "admin123", color: "#d32f2f" },
+    { rol: "Administrativo", user: "funcionario", pass: "func123", color: "#1976d2" },
+    { rol: "Docente", user: "profesor", pass: "prof123", color: "#388e3c" },
+    { rol: "Estudiante", user: "estudiante", pass: "est123", color: "#f57c00" },
 ];
 
 const PARTICULAS = [

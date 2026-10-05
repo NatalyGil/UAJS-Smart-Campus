@@ -2,12 +2,16 @@ import { useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import useAuth from "../../context/useAuth";
 import useSearch from "../../hooks/useSearch";
+import useColeccion from "../../hooks/useColeccion";
 import Icon from "../../components/Icon/Icon";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import { obtenerSolicitudes, ESTADOS_FINALES } from "../../utils/solicitudes";
 import { obtenerReservas } from "../../utils/reservas";
-import { obtenerNotificacionesPorPerfil } from "../../utils/notificaciones";
-import { obtenerEventosPorPerfil } from "../../utils/eventos";
+import {
+    CLAVE_COLECCION as CLAVE_NOTIFICACIONES,
+    obtenerNotificaciones
+} from "../../utils/notificaciones";
+import { obtenerEventosPorPerfil, CLAVE_EVENTOS } from "../../utils/eventos";
 import services from "../../utils/services";
 import "./Dashboard.css";
 
@@ -18,6 +22,19 @@ function capitalizar(texto) {
 // Ajusta getDay() de domingo=0 a lunes=0
 function primerDiaLunes(fecha) {
     return (fecha.getDay() + 6) % 7;
+}
+
+// Las fechas llegan de la API como "YYYY-MM-DD" o "YYYY-MM-DD HH:MM".
+function aFecha(valor) {
+    if (!valor) return null;
+    const d = new Date(String(valor).slice(0, 10) + "T00:00:00");
+    return isNaN(d) ? null : d;
+}
+
+function fechaCorta(valor) {
+    const d = aFecha(valor);
+    if (!d) return "";
+    return d.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
 }
 
 function Dashboard() {
@@ -34,21 +51,39 @@ function Dashboard() {
     const [mesVista, setMesVista]   = useState(hoy.getMonth());
     const [anioVista, setAnioVista] = useState(hoy.getFullYear());
 
-    // TAREA 6: dependencia en user para que se recalcule si cambie la sesión
-    // Las funciones siempre leen localStorage en el momento de llamarse
-    const solicitudes = useMemo(() => obtenerSolicitudes(), [user]);
-    const misReservas = useMemo(() => obtenerReservas(), [user]);
+    // Colecciones vivas del store. Cada módulo mantiene la suya sincronizada
+    // con su microservicio; si alguna todavía no tiene data se recurre al
+    // almacenamiento local para no dejar el panel vacío.
+    const { items: remotasSolicitudes } = useColeccion("solicitudes");
+    const { items: remotasReservas }    = useColeccion("reservas");
+    const { items: remotasEventos }     = useColeccion(CLAVE_EVENTOS);
+    const { items: remotasNotificaciones, enLinea: enLineaNotificaciones } =
+        useColeccion(CLAVE_NOTIFICACIONES);
 
-    // TAREA 3 + 4: notificaciones filtradas por perfil, desde función (no array estático)
-    const notificaciones = useMemo(
-        () => obtenerNotificacionesPorPerfil(user?.rol),
-        [user?.rol]
+    const solicitudes = useMemo(
+        () => (remotasSolicitudes.length > 0 ? remotasSolicitudes : obtenerSolicitudes()),
+        [remotasSolicitudes]
+    );
+    const misReservas = useMemo(
+        () => (remotasReservas.length > 0 ? remotasReservas : obtenerReservas()),
+        [remotasReservas]
     );
 
-    // TAREA 3: eventos desde función (no array estático importado)
+    // La API ya devuelve las notificaciones del usuario en sesión, así que no
+    // se filtran por perfil. Mientras el backend no responde se pintan los
+    // datos precargados.
+    const notificaciones = useMemo(
+        () =>
+            remotasNotificaciones.length > 0 || enLineaNotificaciones
+                ? remotasNotificaciones
+                : obtenerNotificaciones(),
+        [remotasNotificaciones, enLineaNotificaciones]
+    );
+
+    // Los eventos remotos no traen filtrado por perfil: se leen todos.
     const eventos = useMemo(
-        () => obtenerEventosPorPerfil(user?.rol),
-        [user?.rol]
+        () => (remotasEventos.length > 0 ? remotasEventos : obtenerEventosPorPerfil(user?.rol)),
+        [remotasEventos, user?.rol]
     );
 
     // TAREA 5: filtrar servicios por permiso del usuario
@@ -85,8 +120,7 @@ function Dashboard() {
                 ? solicitudes
                 : solicitudes.filter(
                       (s) =>
-                          s.usuario?.id === user?.id ||
-                          (user?.id != null && s.usuario?.id == null)
+                          String(s.usuario?.id ?? s.id_usuario ?? "") === String(user?.id)
                   ),
         [solicitudes, user, esVistaGlobal]
     );
@@ -95,16 +129,19 @@ function Dashboard() {
         () =>
             esVistaGlobal
                 ? misReservas
-                : misReservas.filter((r) => r.usuarioId === user?.id),
+                : misReservas.filter(
+                      (r) => String(r.usuarioId ?? r.id_usuario ?? "") === String(user?.id)
+                  ),
         [misReservas, user, esVistaGlobal]
     );
 
     const misSolicitudes = solicitudesPersonales.slice(0, 5);
 
     const noLeidas            = notificaciones.filter((n) => !n.leida);
-    const proximosEventos     = eventos.filter(
-        (e) => new Date(e.fecha + "T00:00:00") >= hoy
-    );
+    const proximosEventos     = eventos.filter((e) => {
+        const d = aFecha(e.fecha);
+        return d ? d >= hoy : false;
+    });
     const reservasConfirmadas = reservasPersonales.filter((r) => r.estado === "Confirmada");
 
     // TAREA 2: solo solicitudes NO finalizadas
@@ -120,8 +157,8 @@ function Dashboard() {
     const eventosPorDia = useMemo(() => {
         const mapa = new Map();
         eventos.forEach((evento) => {
-            const d = new Date(evento.fecha + "T00:00:00");
-            if (d.getMonth() === mesVista && d.getFullYear() === anioVista) {
+            const d = aFecha(evento.fecha);
+            if (d && d.getMonth() === mesVista && d.getFullYear() === anioVista) {
                 const dia = d.getDate();
                 if (!mapa.has(dia)) mapa.set(dia, []);
                 mapa.get(dia).push(evento);
@@ -232,9 +269,7 @@ function Dashboard() {
             items.push({
                 icono:       sol.servicio === "Reservas" ? "reservas" : "solicitudes",
                 titulo:      `Solicitud ${sol.id} — ${sol.tipo}`,
-                tiempo:      new Date(sol.fecha + "T00:00:00").toLocaleDateString("es-CO", {
-                    day: "numeric", month: "short"
-                }),
+                tiempo:      fechaCorta(sol.fecha),
                 clase:       "blue"
             });
         });
@@ -243,9 +278,7 @@ function Dashboard() {
             items.push({
                 icono:  n.icono,
                 titulo: n.mensaje,
-                tiempo: new Date(n.fecha + "T00:00:00").toLocaleDateString("es-CO", {
-                    day: "numeric", month: "short"
-                }),
+                tiempo: fechaCorta(n.fecha),
                 clase: "purple"
             });
         });
@@ -253,10 +286,8 @@ function Dashboard() {
         proximosEventos.slice(0, 1).forEach((e) => {
             items.push({
                 icono:  "eventos",
-                titulo: `Próximo evento: ${e.nombre}`,
-                tiempo: new Date(e.fecha + "T00:00:00").toLocaleDateString("es-CO", {
-                    day: "numeric", month: "short"
-                }),
+                titulo: `Próximo evento: ${e.nombre || e.titulo}`,
+                tiempo: fechaCorta(e.fecha),
                 clase: "yellow"
             });
         });
@@ -370,9 +401,7 @@ function Dashboard() {
                                     <div className="dashboard__request-id">ID: {sol.id}</div>
                                 </div>
                                 <div className="dashboard__request-date">
-                                    {new Date(sol.fecha + "T00:00:00").toLocaleDateString("es-CO", {
-                                        day: "2-digit", month: "2-digit", year: "numeric"
-                                    })}
+                                    {fechaCorta(sol.fecha)}
                                 </div>
                             </div>
                         ))
@@ -397,9 +426,7 @@ function Dashboard() {
                                         <div className="dashboard__notification-title">{notificacion.tipo}</div>
                                         <div className="dashboard__notification-text">{notificacion.mensaje}</div>
                                         <div className="dashboard__notification-time">
-                                            {new Date(notificacion.fecha + "T00:00:00").toLocaleDateString("es-CO", {
-                                                day: "numeric", month: "short"
-                                            })}
+                                            {fechaCorta(notificacion.fecha)}
                                         </div>
                                     </div>
                                 </div>
@@ -489,8 +516,10 @@ function Dashboard() {
                 >
                     {tooltip.eventos.map((evento) => (
                         <span className="dashboard__calendar-tooltip-item" key={evento.id}>
-                            <strong>{evento.nombre}</strong>
-                            <span>{evento.hora} · {evento.lugar}</span>
+                            <strong>{evento.nombre || evento.titulo}</strong>
+                            <span>
+                                {evento.hora || evento.hora_inicio} · {evento.lugar || evento.ubicacion}
+                            </span>
                         </span>
                     ))}
                 </div>

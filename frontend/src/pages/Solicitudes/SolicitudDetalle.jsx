@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import useAuth from "../../context/useAuth";
 import Icon from "../../components/Icon/Icon";
@@ -6,14 +6,13 @@ import StatusBadge from "../../components/StatusBadge/StatusBadge";
 import Modal from "../../components/Modal/Modal";
 import {
     ETIQUETA_ESTADO,
-    ESTADOS_FINALES,
     ACCIONES_POR_ESTADO,
     ORDEN_ESTADOS,
-    obtenerSolicitudPorId,
     ejecutarAccion,
     progresoDe
 } from "../../utils/solicitudes";
 import { obtenerUsuarios } from "../../utils/users";
+import useColeccion from "../../hooks/useColeccion";
 import "./SolicitudDetalle.css";
 
 const PRIORIDAD_CLASE = {
@@ -60,14 +59,21 @@ function SolicitudDetalle() {
     const { id } = useParams();
     const { user, puede } = useAuth();
 
-    const [solicitud, setSolicitud] = useState(() =>
-        obtenerSolicitudPorId(id)
+    // La solicitud se lee de la colección: cuando llega del backend la vista
+    // se repinta sola.
+    const { items, cargando, error, enLinea } = useColeccion("solicitudes");
+
+    const solicitud = useMemo(
+        () =>
+            items.find(
+                (s) =>
+                    String(s.id) === String(id) ||
+                    String(s.id_solicitud) === String(id)
+            ) || null,
+        [items, id]
     );
 
-    useEffect(() => {
-        setSolicitud(obtenerSolicitudPorId(id));
-    }, [id]);
-    const [aviso, setAviso] = useState("");
+    const [aviso, setAviso] = useState(null);
 
     const [rechazarAbierto, setRechazarAbierto] = useState(false);
     const [notaAbierto, setNotaAbierto] = useState(false);
@@ -120,10 +126,11 @@ function SolicitudDetalle() {
         return lista;
     }, [solicitud?.estado]);
 
+    const historial = solicitud?.historial;
     const indicesAlcanzados = useMemo(() => {
-        if (!solicitud?.historial) return new Set();
+        if (!historial) return new Set();
         const estados = new Set();
-        solicitud.historial.forEach((h) => {
+        historial.forEach((h) => {
             if (h.estado && ORDEN_ESTADOS.includes(h.estado)) {
                 const idx = ORDEN_ESTADOS.indexOf(h.estado);
                 for (let i = 0; i <= idx; i++) {
@@ -132,31 +139,49 @@ function SolicitudDetalle() {
             }
         });
         return estados;
-    }, [solicitud?.historial]);
+    }, [historial]);
 
     const abrirNota = () => {
         setNota("");
         setNotaAbierto(true);
     };
 
-    const mostrarAviso = (texto) => {
-        setAviso(texto);
-        setTimeout(() => setAviso(""), 2500);
+    const mostrarAviso = (texto, tipo = "success") => {
+        setAviso({ texto, tipo });
+        setTimeout(() => setAviso(null), 2500);
     };
 
-    const accionSimple = (accion, datos = {}) => {
-        if (!solicitud) return;
+    const accionSimple = async (accion, datos = {}) => {
+        if (!solicitud) return null;
         if (!puedeGestionar) {
-            mostrarAviso("No tienes permiso para realizar esta acción.");
-            return;
+            mostrarAviso("No tienes permiso para realizar esta acción.", "error");
+            return null;
         }
-        const act = ejecutarAccion(solicitud.id, accion, {
-            usuario: user?.nombre || "Administrador",
-            ...datos
-        });
-        if (act) {
-            setSolicitud(act);
-            mostrarAviso("Acción ejecutada correctamente.");
+        try {
+            const act = await ejecutarAccion(solicitud.id, accion, {
+                usuario: user?.nombre || "Administrador",
+                ...datos
+            });
+            if (!act) {
+                mostrarAviso(
+                    "La acción no aplica para el estado actual.",
+                    "error"
+                );
+                return null;
+            }
+            mostrarAviso(
+                enLinea
+                    ? "Acción ejecutada correctamente."
+                    : "Sin conexión con el servidor: el cambio quedó pendiente.",
+                enLinea ? "success" : "warning"
+            );
+            return act;
+        } catch (err) {
+            mostrarAviso(
+                err?.message || "No se pudo ejecutar la acción.",
+                "error"
+            );
+            return null;
         }
     };
 
@@ -263,13 +288,16 @@ function SolicitudDetalle() {
                 >
                     ← Volver a solicitudes
                 </Link>
-                <div className="empty">Solicitud no encontrada.</div>
+                <div className="empty">
+                    {cargando
+                        ? "Cargando solicitud…"
+                        : "Solicitud no encontrada."}
+                </div>
             </div>
         );
     }
 
     const esRechazada = solicitud.estado === "RECHAZADA";
-    const esFinal = ESTADOS_FINALES.includes(solicitud.estado);
 
     return (
         <div className="page">
@@ -281,9 +309,16 @@ function SolicitudDetalle() {
             </Link>
 
             {aviso && (
-                <div className="toast toast--success">
+                <div className={`toast toast--${aviso.tipo}`}>
                     <Icon name="info" size={14} />
-                    {aviso}
+                    {aviso.texto}
+                </div>
+            )}
+
+            {error && (
+                <div className="toast toast--warning">
+                    <Icon name="info" size={14} />
+                    No se pudo sincronizar con el servidor: {error}
                 </div>
             )}
 

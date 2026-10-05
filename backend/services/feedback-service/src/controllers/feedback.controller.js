@@ -24,13 +24,13 @@ async function getOne(req, res, next) {
 
 async function create(req, res, next) {
     try {
-        const { id_pqrs, tipo, fecha, estado, descripcion } = req.body;
+        const { id_usuario, tipo, fecha, estado, descripcion } = req.body;
         if (!tipo || !fecha || !estado || !descripcion) {
             return res.status(400).json({ error: 'Faltan campos requeridos' });
         }
         const [result] = await pool.query(
-            'INSERT INTO pqrs (id_pqrs, tipo, fecha, estado, descripcion) VALUES (?, ?, ?, ?, ?)',
-            [id_pqrs || '', tipo, fecha, estado, descripcion]
+            'INSERT INTO pqrs (id_usuario, tipo, fecha, estado, descripcion) VALUES (?, ?, ?, ?, ?)',
+            [id_usuario || null, tipo, fecha, estado, descripcion]
         );
         const [newPqrs] = await pool.query('SELECT * FROM pqrs WHERE id_pqrs = ?', [result.insertId]);
         res.status(201).json({ data: newPqrs[0] });
