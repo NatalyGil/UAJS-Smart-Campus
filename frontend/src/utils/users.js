@@ -132,7 +132,8 @@ const usuarios = [
         programa: "Dirección Académica",
         estado: "Activo",
         cargo: "Coordinadora general",
-        campus: "Campus principal"
+        campus: "Campus principal",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=NR"
     },
     {
         id: 2,
@@ -144,7 +145,8 @@ const usuarios = [
         programa: "Bienestar Universitario",
         estado: "Activo",
         cargo: "Analista de servicios",
-        campus: "Campus Norte"
+        campus: "Campus Norte",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=CM"
     },
     {
         id: 3,
@@ -156,7 +158,8 @@ const usuarios = [
         programa: "Matemáticas",
         estado: "Activo",
         cargo: "Docente titular",
-        campus: "Campus central"
+        campus: "Campus central",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=LG"
     },
     {
         id: 4,
@@ -168,7 +171,8 @@ const usuarios = [
         programa: "Ingeniería de Sistemas",
         estado: "Activo",
         cargo: "Estudiante",
-        campus: "Campus central"
+        campus: "Campus central",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=AT"
     },
     {
         id: 5,
@@ -180,7 +184,8 @@ const usuarios = [
         programa: "Ingeniería de Software",
         estado: "Activo",
         cargo: "Profesora de proyectos",
-        campus: "Campus principal"
+        campus: "Campus principal",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=MC"
     },
     {
         id: 6,
@@ -192,7 +197,8 @@ const usuarios = [
         programa: "Administración de Empresas",
         estado: "Activo",
         cargo: "Estudiante",
-        campus: "Campus occidente"
+        campus: "Campus occidente",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=VM"
     },
     {
         id: 7,
@@ -204,7 +210,8 @@ const usuarios = [
         programa: "Tecnología e innovación",
         estado: "Activo",
         cargo: "Director de operación",
-        campus: "Campus principal"
+        campus: "Campus principal",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=JA"
     },
     {
         id: 8,
@@ -216,7 +223,8 @@ const usuarios = [
         programa: "Servicios estudiantiles",
         estado: "Inactivo",
         cargo: "Coordinadora administrativa",
-        campus: "Campus centro"
+        campus: "Campus centro",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=SJ"
     },
     {
         id: 9,
@@ -228,7 +236,8 @@ const usuarios = [
         programa: "Física",
         estado: "Activo",
         cargo: "Docente de laboratorio",
-        campus: "Campus central"
+        campus: "Campus central",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=RT"
     },
     {
         id: 10,
@@ -240,7 +249,8 @@ const usuarios = [
         programa: "Ingeniería Civil",
         estado: "Activo",
         cargo: "Estudiante",
-        campus: "Campus Norte"
+        campus: "Campus Norte",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=IR"
     },
     {
         id: 11,
@@ -252,7 +262,8 @@ const usuarios = [
         programa: "Tecnologías de la información",
         estado: "Activo",
         cargo: "Director de sistemas",
-        campus: "Campus principal"
+        campus: "Campus principal",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=AG"
     },
     {
         id: 12,
@@ -264,7 +275,8 @@ const usuarios = [
         programa: "Recursos Humanos",
         estado: "Activo",
         cargo: "Analista de talento humano",
-        campus: "Campus occidente"
+        campus: "Campus occidente",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=PV"
     },
     {
         id: 13,
@@ -276,7 +288,8 @@ const usuarios = [
         programa: "Economía",
         estado: "Activo",
         cargo: "Docente titular",
-        campus: "Campus central"
+        campus: "Campus central",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=FC"
     },
     {
         id: 14,
@@ -288,7 +301,8 @@ const usuarios = [
         programa: "Derecho",
         estado: "Activo",
         cargo: "Estudiante",
-        campus: "Campus centro"
+        campus: "Campus centro",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=CH"
     },
     {
         id: 15,
@@ -300,7 +314,8 @@ const usuarios = [
         programa: "Administración",
         estado: "Activo",
         cargo: "Rectora",
-        campus: "Campus principal"
+        campus: "Campus principal",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=LC"
     },
     {
         id: 16,
@@ -312,7 +327,8 @@ const usuarios = [
         programa: "Idiomas",
         estado: "Inactivo",
         cargo: "Docente de inglés",
-        campus: "Campus occidente"
+        campus: "Campus occidente",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=SR"
     },
     {
         id: 17,
@@ -324,7 +340,8 @@ const usuarios = [
         programa: "Psicología",
         estado: "Activo",
         cargo: "Estudiante",
-        campus: "Campus Norte"
+        campus: "Campus Norte",
+        foto_perfil: "https://api.dicebear.com/7.x/initials/svg?seed=DO"
     }
 ];
 

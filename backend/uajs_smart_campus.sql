@@ -55,7 +55,7 @@ CREATE TABLE usuarios (
     programa        VARCHAR(120) DEFAULT '',
     cargo           VARCHAR(120) DEFAULT '',
     campus          VARCHAR(80)  DEFAULT 'Campus principal',
-    foto_perfil     VARCHAR(255) DEFAULT NULL,
+     foto_perfil     LONGTEXT DEFAULT NULL,
     estado          VARCHAR(20)  NOT NULL DEFAULT 'Activo',
     created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -305,25 +305,28 @@ INSERT INTO servicios (id_servicio, nombre, descripcion) VALUES
 -- necesita hashes pregenerados.
 INSERT INTO usuarios
     (id_usuario, identificacion, usuario, cedula, contraseña, nombre, apellido,
-     correo, telefono, id_rol, tipo_usuario, programa, cargo, campus, estado)
+     correo, telefono, id_rol, tipo_usuario, programa, cargo, campus, foto_perfil, estado)
 VALUES
-    (1,  'admin',      'admin',      '1023456789', 'admin123', 'Natalia',    'Rodríguez',    'natalia.rodriguez@uajs.edu.co',    '3001234501', 1, 'Administrador', 'Dirección Académica',     'Coordinadora general',      'Campus principal', 'Activo'),
-    (2,  'funcionario', 'funcionario', '1023456788', 'func123',  'Carlos',     'Méndez',       'carlos.mendez@uajs.edu.co',       '3001234502', 4, 'Administrativo', 'Bienestar Universitario',   'Analista de servicios',     'Campus Norte',     'Activo'),
-    (3,  'profesor',   'profesor',   '1023456787', 'prof123',  'Laura',      'Gómez',        'laura.gomez@uajs.edu.co',        '3001234503', 3, 'Docente',        'Matemáticas',              'Docente titular',           'Campus central',   'Activo'),
-    (4,  'estudiante', 'estudiante', '1023456786', 'est123',  'Andrés',     'Torres',       'andres.torres@uajs.edu.co',       '3001234504', 2, 'Estudiante',     'Ingeniería de Sistemas',    'Estudiante',                'Campus central',   'Activo'),
-    (5,  'docente2',   'docente2',   '1023456785', 'doc123',  'María Fernanda', 'Cárdenas', 'mf.cardenas@uajs.edu.co',        '3001234505', 3, 'Docente',        'Ingeniería de Software',    'Profesora de proyectos',    'Campus principal', 'Activo'),
-    (6,  'estudiante2','estudiante2','1023456784', 'stu123',  'Valentina',   'Morales',      'valentina.morales@uajs.edu.co',  '3001234506', 2, 'Estudiante',     'Administración de Empresas','Estudiante',               'Campus occidente', 'Activo'),
-    (7,  'admin2',     'admin2',     '1023456783', 'ua123',   'Javier',     'Álvarez',      'javier.alvarez@uajs.edu.co',     '3001234507', 1, 'Administrador', 'Tecnología e innovación',  'Director de operación',     'Campus principal', 'Activo'),
-    (8,  'admvo',      'admvo',      '1023456782', 'adm123',  'Sofía',      'Jiménez',      'sofia.jimenez@uajs.edu.co',       '3001234508', 4, 'Administrativo', 'Servicios estudiantiles',   'Coordinadora administrativa','Campus centro',  'Inactivo'),
-    (9,  'docente3',   'docente3',   '1023456781', 'doc456',  'Ricardo',    'Torres',       'ricardo.torres@uajs.edu.co',     '3001234509', 3, 'Docente',        'Física',                   'Docente de laboratorio',    'Campus central',   'Activo'),
-    (10, 'estudiante3','estudiante3','1023456780', 'stu456',  'Isabella',   'Ramírez',      'isabella.ramirez@uajs.edu.co',   '3001234510', 2, 'Estudiante',     'Ingeniería Civil',         'Estudiante',                'Campus Norte',     'Activo'),
-    (11, 'admin3',     'admin3',     '1023456779', 'admin456','Andrés',     'Gutiérrez',    'andres.gutierrez@uajs.edu.co',   '3001234511', 1, 'Administrador', 'Tecnologías de la información','Director de sistemas',   'Campus principal', 'Activo'),
-    (12, 'admvo2',     'admvo2',     '1023456778', 'adm456',  'Paula',      'Vargas',       'paula.vargas@uajs.edu.co',       '3001234512', 4, 'Administrativo', 'Recursos Humanos',         'Analista de talento humano','Campus occidente','Activo'),
-    (13, 'docente4',   'docente4',   '1023456777', 'doc789',  'Fernando',   'Castillo',     'fernando.castillo@uajs.edu.co', '3001234513', 3, 'Docente',        'Economía',                 'Docente titular',           'Campus central',   'Activo'),
-    (14, 'estudiante4','estudiante4','1023456776', 'stu789',  'Camila',     'Herrera',      'camila.herrera@uajs.edu.co',    '3001234514', 2, 'Estudiante',     'Derecho',                  'Estudiante',                'Campus centro',    'Activo'),
-    (15, 'admin4',     'admin4',     '1023456775', 'admin789','Luisa',      'Cardona',      'luisa.cardona@uajs.edu.co',      '3001234515', 1, 'Administrador', 'Administración',           'Rectora',                   'Campus principal', 'Activo'),
-    (16, 'docente5',   'docente5',   '1023456774', 'doc000',  'Sebastián',   'Rojas',        'sebastian.rojas@uajs.edu.co',   '3001234516', 3, 'Docente',        'Idiomas',                  'Docente de inglés',        'Campus occidente', 'Inactivo'),
-    (17, 'estudiante5','estudiante5','1023456773', 'stu000',  'Daniela',    'Ortiz',        'daniela.ortiz@uajs.edu.co',     '3001234517', 2, 'Estudiante',     'Psicología',               'Estudiante',                'Campus Norte',     'Activo');
+    (1,  'admin',      'admin',      '1023456789', 'admin123', 'Natalia',    'Rodríguez',    'natalia.rodriguez@uajs.edu.co',    '3001234501', 1, 'Administrador', 'Dirección Académica',     'Coordinadora general',      'Campus principal', 'https://api.dicebear.com/7.x/initials/svg?seed=NR', 'Activo'),
+    (2,  'funcionario', 'funcionario', '1023456788', 'func123',  'Carlos',     'Méndez',       'carlos.mendez@uajs.edu.co',       '3001234502', 4, 'Administrativo', 'Bienestar Universitario',   'Analista de servicios',     'Campus Norte',     'https://api.dicebear.com/7.x/initials/svg?seed=CM', 'Activo'),
+    (3,  'profesor',   'profesor',   '1023456787', 'prof123',  'Laura',      'Gómez',        'laura.gomez@uajs.edu.co',        '3001234503', 3, 'Docente',        'Matemáticas',              'Docente titular',           'Campus central',   'https://api.dicebear.com/7.x/initials/svg?seed=LG', 'Activo'),
+    (4,  'estudiante', 'estudiante', '1023456786', 'est123',  'Andrés',     'Torres',       'andres.torres@uajs.edu.co',       '3001234504', 2, 'Estudiante',     'Ingeniería de Sistemas',    'Estudiante',                'Campus central',   'https://api.dicebear.com/7.x/initials/svg?seed=AT', 'Activo'),
+    (5,  'docente2',   'docente2',   '1023456785', 'doc123',  'María Fernanda', 'Cárdenas', 'mf.cardenas@uajs.edu.co',        '3001234505', 3, 'Docente',        'Ingeniería de Software',    'Profesora de proyectos',    'Campus principal', 'https://api.dicebear.com/7.x/initials/svg?seed=MC', 'Activo'),
+    (6,  'estudiante2','estudiante2','1023456784', 'stu123',  'Valentina',   'Morales',      'valentina.morales@uajs.edu.co',  '3001234506', 2, 'Estudiante',     'Administración de Empresas','Estudiante',               'Campus occidente', 'https://api.dicebear.com/7.x/initials/svg?seed=VM', 'Activo'),
+    (7,  'admin2',     'admin2',     '1023456783', 'ua123',   'Javier',     'Álvarez',      'javier.alvarez@uajs.edu.co',     '3001234507', 1, 'Administrador', 'Tecnología e innovación',  'Director de operación',     'Campus principal', 'https://api.dicebear.com/7.x/initials/svg?seed=JA', 'Activo'),
+    (8,  'admvo',      'admvo',      '1023456782', 'adm123',  'Sofía',      'Jiménez',      'sofia.jimenez@uajs.edu.co',       '3001234508', 4, 'Administrativo', 'Servicios estudiantiles',   'Coordinadora administrativa','Campus centro',  'https://api.dicebear.com/7.x/initials/svg?seed=SJ', 'Inactivo'),
+    (9,  'docente3',   'docente3',   '1023456781', 'doc456',  'Ricardo',    'Torres',       'ricardo.torres@uajs.edu.co',     '3001234509', 3, 'Docente',        'Física',                   'Docente de laboratorio',    'Campus central',   'https://api.dicebear.com/7.x/initials/svg?seed=RT', 'Activo'),
+    (10, 'estudiante3','estudiante3','1023456780', 'stu456',  'Isabella',   'Ramírez',      'isabella.ramirez@uajs.edu.co',   '3001234510', 2, 'Estudiante',     'Ingeniería Civil',         'Estudiante',                'Campus Norte',     'https://api.dicebear.com/7.x/initials/svg?seed=IR', 'Activo'),
+    (11, 'admin3',     'admin3',     '1023456779', 'admin456','Andrés',     'Gutiérrez',    'andres.gutierrez@uajs.edu.co',   '3001234511', 1, 'Administrador', 'Tecnologías de la información','Director de sistemas',   'Campus principal', 'https://api.dicebear.com/7.x/initials/svg?seed=AG', 'Activo'),
+    (12, 'admvo2',     'admvo2',     '1023456778', 'adm456',  'Paula',      'Vargas',       'paula.vargas@uajs.edu.co',       '3001234512', 4, 'Administrativo', 'Recursos Humanos',         'Analista de talento humano','Campus occidente','https://api.dicebear.com/7.x/initials/svg?seed=PV', 'Activo'),
+    (13, 'docente4',   'docente4',   '1023456777', 'doc789',  'Fernando',   'Castillo',     'fernando.castillo@uajs.edu.co', '3001234513', 3, 'Docente',        'Economía',                 'Docente titular',           'Campus central',   'https://api.dicebear.com/7.x/initials/svg?seed=FC', 'Activo'),
+    (14, 'estudiante4','estudiante4','1023456776', 'stu789',  'Camila',     'Herrera',      'camila.herrera@uajs.edu.co',    '3001234514', 2, 'Estudiante',     'Derecho',                  'Estudiante',                'Campus centro',    'https://api.dicebear.com/7.x/initials/svg?seed=CH', 'Activo'),
+    (15, 'admin4',     'admin4',     '1023456775', 'admin789','Luisa',      'Cardona',      'luisa.cardona@uajs.edu.co',      '3001234515', 1, 'Administrador', 'Administración',           'Rectora',                   'Campus principal', 'https://api.dicebear.com/7.x/initials/svg?seed=LC', 'Activo'),
+    (16, 'docente5',   'docente5',   '1023456774', 'doc000',  'Sebastián',   'Rojas',        'sebastian.rojas@uajs.edu.co',   '3001234516', 3, 'Docente',        'Idiomas',                  'Docente de inglés',        'Campus occidente', 'https://api.dicebear.com/7.x/initials/svg?seed=SR', 'Inactivo'),
+    (17, 'estudiante5','estudiante5','1023456773', 'stu000',  'Daniela',    'Ortiz',        'daniela.ortiz@uajs.edu.co',     '3001234517', 2, 'Estudiante',     'Psicología',               'Estudiante',                'Campus Norte',     'https://api.dicebear.com/7.x/initials/svg?seed=DO', 'Activo'),
+    (18, 'docente6',   'docente6',   '1023456772', 'doc111',  'Oscar',      'Navas',        'oscar.navas@uajs.edu.co',       '3001234518', 3, 'Docente',        'Ingeniería Industrial',    'Coordinador de laboratorio','Campus principal', 'https://api.dicebear.com/7.x/initials/svg?seed=ON', 'Activo'),
+    (19, 'estudiante6','estudiante6','1023456771', 'stu222',  'Mateo',      'Rengifo',      'mateo.rengifo@uajs.edu.co',     '3001234519', 2, 'Estudiante',     'Administración de Empresas','Estudiante',              'Campus central',   'https://api.dicebear.com/7.x/initials/svg?seed=MR', 'Activo'),
+    (20, 'estudiante7','estudiante7','1023456770', 'stu333',  'Catalina',   'Salinas',      'catalina.salinas@uajs.edu.co',  '3001234520', 2, 'Estudiante',     'Ingeniería de Sistemas',    'Estudiante',                'Campus Norte',     'https://api.dicebear.com/7.x/initials/svg?seed=CS', 'Activo');
 
 INSERT INTO recursos
     (id_recurso, nombre_recurso, codigo, tipo_recurso, descripcion, ubicacion, capacidad, estado, disponibilidad)
@@ -337,23 +340,31 @@ VALUES
     (7,  'Proyector Portatil 2',     'REC-007', 'Equipos',     'Proyector para presentaciones',          'Bodega tecnologica', 1,     'Disponible', 'Disponible'),
     (8,  'Sala de Estudio 1',        'REC-008', 'Salas',       'Sala de estudio individual',              'Biblioteca - Piso 3', 8,   'Disponible', 'Disponible'),
     (9,  'Sala de Estudio 2',        'REC-009', 'Salas',       'Sala de estudio individual',              'Biblioteca - Piso 3', 8,   'Mantenimiento','Mantenimiento'),
-    (10, 'Auditorio VIP',            'REC-010', 'Auditorios',  'Auditorio pequeno para reuniones',         'Edificio A - Piso 3', 60,  'Disponible', 'Disponible');
+     (10, 'Auditorio VIP',            'REC-010', 'Auditorios',  'Auditorio pequeño para reuniones',         'Edificio A - Piso 3', 60,  'Disponible', 'Disponible'),
+     (11, 'Sala de Estudio 3',        'REC-011', 'Salas',       'Sala de estudio grupal',                   'Biblioteca - Piso 4', 12,  'Disponible', 'Disponible'),
+     (12, 'Laboratorio de Química',   'REC-012', 'Laboratorios', 'Laboratorio para prácticas de química',    'Edificio D - Piso 1', 20,  'Disponible', 'Disponible'),
+     (13, 'Trípode de Audio',         'REC-013', 'Equipos',     'Micrófonos y mesa de sonido',              'Bodega tecnologica', 1,     'Disponible', 'Disponible'),
+     (14, 'Kit Audiovisual',          'REC-014', 'Equipos',     'Cámara, micrófono y luces para eventos',    'Bodega tecnologica', 1,     'En mantenimiento', 'En mantenimiento');
 
 INSERT INTO eventos_y_actividades
     (id_evento, nombre_evento, descripcion, fecha, hora_inicio, hora_fin, ubicacion, tipo_evento, estado, id_usuario, cupo, inscritos)
 VALUES
-    (1, 'Bienvenida a nuevos estudiantes', 'Acto de bienvenida para el periodo nuevo',      '2026-09-15', '08:00:00', '10:00:00', 'Auditorio Principal', 'Academico',   'Programado', 1, 300, 180),
-    (2, 'Taller de Emprendimiento',        'Taller de ideas de negocio para estudiantes',   '2026-09-18', '14:00:00', '17:00:00', 'Sala de Conferencias 1', 'Formacion', 'Programado', 1, 40,  35),
-    (3, 'Feria de Empleabilidad',          'Encuentro con empresas aliadas',               '2026-09-22', '09:00:00', '13:00:00', 'Auditorio Principal', 'Cultural',    'Programado', 1, 300, 210),
+    (1, 'Bienvenida a nuevos estudiantes', 'Acto de bienvenida para el periodo nuevo',      '2026-09-15', '08:00:00', '10:00:00', 'Auditorio Principal', 'Académico',   'Programado', 1, 300, 180),
+    (2, 'Taller de Emprendimiento',        'Taller de ideas de negocio para estudiantes',   '2026-09-18', '14:00:00', '17:00:00', 'Sala de Conferencias 1', 'Formación', 'Programado', 1, 40,  35),
+    (3, 'Feria de Empleabilidad',          'Encuentro con empresas aliadas',               '2026-09-22', '09:00:00', '13:00:00', 'Auditorio Principal', 'Cultural',     'Programado', 1, 300, 210),
     (4, 'Torneo Deportivo Intercampus',   'Encuentro deportivo entre facultades',          '2026-10-02', '07:00:00', '12:00:00', 'Cancha central',      'Deportivo',  'Programado', 1, 120, 60),
-    (5, 'Seminario de Investigación',      'Presentacion de resultados de investigación',  '2026-09-25', '10:00:00', '12:30:00', 'Auditorio VIP',       'Academico',   'Programado', 1, 60,  41),
-    (6, 'Concierto de Música Andina',     'Presentacion artistica de fin de semestre',     '2026-10-10', '18:00:00', '21:00:00', 'Auditorio Principal', 'Cultural',    'Programado', 1, 300, 240);
+    (5, 'Seminario de Investigación',      'Presentación de resultados de investigación',  '2026-09-25', '10:00:00', '12:30:00', 'Auditorio VIP',       'Académico',   'Programado', 1, 60,  41),
+    (6, 'Concierto de Música Andina',     'Presentación artística de fin de semestre',     '2026-10-10', '18:00:00', '21:00:00', 'Auditorio Principal', 'Cultural',    'Programado', 1, 300, 240),
+    (7, 'Jornada de Puertas Abiertas',     'Recorrido por instalaciones y programas',      '2026-10-05', '09:00:00', '16:00:00', 'Campus principal',    'Académico',   'Programado', 1, 200, 120),
+    (8, 'Taller de Ofimática',             'Introducción a herramientas de productividad',  '2026-10-12', '15:00:00', '18:00:00', 'Laboratorio de Informatica 1', 'Formación', 'Programado', 5, 25, 18);
 
 INSERT INTO inscripciones_eventos (id_evento, id_usuario) VALUES
     (1, 4), (1, 6), (1, 10), (1, 14), (1, 17),
     (2, 4), (2, 6), (2, 14),
     (3, 4), (3, 10), (3, 17),
-    (5, 6), (5, 14);
+    (5, 6), (5, 14),
+    (7, 4), (7, 10), (7, 19),
+    (8, 6), (8, 19), (8, 20);
 
 INSERT INTO solicitudes
     (id_solicitud, codigo, tipo, id_usuario, id_servicio, id_responsable, prioridad, dependencia, fecha_solicitud, descripcion, solicitante, estado, respuesta)

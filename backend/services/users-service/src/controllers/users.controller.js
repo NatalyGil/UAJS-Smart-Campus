@@ -1,7 +1,7 @@
 const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 
-const CAMPOS = 'id_usuario, identificacion, usuario, cedula, nombre, apellido, correo, telefono, id_rol, tipo_usuario, programa, cargo, campus, estado';
+const CAMPOS = 'id_usuario, identificacion, usuario, cedula, nombre, apellido, correo, telefono, id_rol, tipo_usuario, programa, cargo, campus, foto_perfil, estado';
 const SALT_ROUNDS = 10;
 
 async function getAll(req, res, next) {
@@ -30,7 +30,7 @@ async function create(req, res, next) {
     try {
         const {
             nombre, apellido, correo, usuario, password, cedula,
-            telefono, id_rol, tipo_usuario, programa, cargo, campus, identificacion
+            telefono, id_rol, tipo_usuario, programa, cargo, campus, identificacion, foto_perfil
         } = req.body;
 
         if (!nombre || !correo || !usuario || !password) {
@@ -50,8 +50,8 @@ async function create(req, res, next) {
         const [result] = await pool.query(
             `INSERT INTO usuarios
                 (identificacion, usuario, cedula, contraseña, nombre, apellido, correo,
-                 telefono, id_rol, tipo_usuario, programa, cargo, campus, estado)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
+                 telefono, id_rol, tipo_usuario, programa, cargo, campus, foto_perfil, estado)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
             [
                 identificacion || usuario,
                 usuario,
@@ -65,7 +65,8 @@ async function create(req, res, next) {
                 tipo_usuario || 'Estudiante',
                 programa || '',
                 cargo || '',
-                campus || 'Campus principal'
+                campus || 'Campus principal',
+                foto_perfil || null
             ]
         );
 
@@ -81,7 +82,7 @@ async function update(req, res, next) {
         const { id } = req.params;
         const {
             nombre, apellido, correo, usuario, cedula, password,
-            telefono, id_rol, tipo_usuario, programa, cargo, campus, estado
+            telefono, id_rol, tipo_usuario, programa, cargo, campus, estado, foto_perfil
         } = req.body;
 
         if (!nombre || !correo || !usuario) {
@@ -92,12 +93,12 @@ async function update(req, res, next) {
         const campos = [
             'nombre = ?', 'apellido = ?', 'correo = ?', 'usuario = ?', 'cedula = ?',
             'telefono = ?', 'id_rol = ?', 'tipo_usuario = ?', 'programa = ?',
-            'cargo = ?', 'campus = ?', 'estado = ?'
+            'cargo = ?', 'campus = ?', 'foto_perfil = ?', 'estado = ?'
         ];
         const valores = [
             nombre, apellido || '', correo, usuario, cedula || null,
             telefono || '', id_rol || 2, tipo_usuario || 'Estudiante', programa || '',
-            cargo || '', campus || 'Campus principal', estado || 'Activo'
+            cargo || '', campus || 'Campus principal', foto_perfil || null, estado || 'Activo'
         ];
 
         if (password) {

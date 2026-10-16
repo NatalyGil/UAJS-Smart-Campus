@@ -65,6 +65,8 @@ export function mapearUsuario(raw) {
         programa: texto(raw.programa, "No especificado"),
         cargo: texto(raw.cargo),
         campus: texto(raw.campus, "Campus principal"),
+        foto_perfil: texto(raw.foto_perfil, ""),
+        foto: texto(raw.foto_perfil, ""),
         estado: texto(raw.estado, "Activo")
     };
 }
@@ -94,6 +96,7 @@ export function mapearUsuarioAPayload(modelo) {
         programa: modelo.programa || "",
         cargo: modelo.cargo || "",
         campus: modelo.campus || "Campus principal",
+        foto_perfil: modelo.foto_perfil || modelo.foto || "",
         estado: modelo.estado || "Activo"
     };
 }
@@ -110,6 +113,7 @@ export function mapearUsuarioSesion(data) {
         rol: nombreDeRol(data.rol ?? data.id_rol, data.tipo_usuario),
         id_rol: Number(data.rol ?? data.id_rol) || 2,
         programa: "No especificado",
+        foto: texto(data.foto_perfil || data.foto, ""),
         token: data.token
     };
 }

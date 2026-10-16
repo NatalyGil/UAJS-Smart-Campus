@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import useAuth from "../../context/useAuth";
 import Icon from "../../components/Icon/Icon";
+import { usersApi } from "../../utils/api";
 import {
     getAvatarStyle,
     getUserInitials,
@@ -25,7 +26,7 @@ function Perfil() {
     const usuario = user?.usuario || "—";
 
     // ── Subir foto ──────────────────────────────────────────────────────────
-    const handleFotoChange = (e) => {
+    const handleFotoChange = async (e) => {
         const archivo = e.target.files?.[0];
         if (!archivo) return;
 
@@ -42,11 +43,19 @@ function Perfil() {
 
         setErrorFoto("");
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
             const base64 = ev.target.result;
+            // 1. localStorage (inmediato)
             savePhotoByUserId(user?.id, base64);
             setFoto(base64);
+            // 2. sesión en memoria
             updateUser({ foto: base64 });
+            // 3. BD (sincronizar foto_perfil del usuario)
+            try {
+                await usersApi.update(user?.id, { foto_perfil: base64 });
+            } catch (err) {
+                console.warn("No se pudo sincronizar la foto a la BD:", err);
+            }
         };
         reader.readAsDataURL(archivo);
         // Limpiar el input para que vuelva a disparar si se selecciona el mismo archivo
@@ -54,10 +63,15 @@ function Perfil() {
     };
 
     // ── Eliminar foto ───────────────────────────────────────────────────────
-    const handleEliminarFoto = () => {
+    const handleEliminarFoto = async () => {
         removePhotoByUserId(user?.id);
         setFoto("");
         updateUser({ foto: "" });
+        try {
+            await usersApi.update(user?.id, { foto_perfil: "" });
+        } catch (err) {
+            console.warn("No se pudo limpiar la foto en la BD:", err);
+        }
     };
 
     const infoPersonal = [

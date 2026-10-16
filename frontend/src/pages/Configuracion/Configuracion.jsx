@@ -4,7 +4,7 @@ import { useTheme } from "../../context/ThemeContext";
 import useFontSize from "../../hooks/useFontSize";
 import useColeccion from "../../hooks/useColeccion";
 import Icon from "../../components/Icon/Icon";
-import { configurationApi } from "../../utils/api";
+import { configurationApi, usersApi } from "../../utils/api";
 import {
     getPhotoByUserId,
     savePhotoByUserId,
@@ -254,8 +254,10 @@ function Configuracion() {
         idUsuarioRef.current = user?.id;
     });
 
-    // La foto de perfil es un dataURL: pesa demasiado para la columna TEXT y
-    // sigue living en `uajs_foto_${id}`, así que no viaja al backend.
+    // La foto de perfil es un dataURL: pesa demasiado para la tabla
+    // `configuracion` y vive en `usuarios.foto_perfil`, así que no viaja
+    // al configuration-service. Se sincroniza a la BD directamente en
+    // manejarFoto / eliminarFoto mediante usersApi.update.
     const valorParaBackend = (seccion, valor) => {
         if (seccion !== "cuenta") return valor;
         const resto = { ...(valor || {}) };
@@ -412,12 +414,12 @@ function Configuracion() {
         marcarGuardado("cuenta");
     };
 
-    const manejarFoto = (event) => {
+    const manejarFoto = async (event) => {
         const archivo = event.target.files?.[0];
         if (!archivo || !archivo.type.startsWith("image/")) return;
 
         const lector = new FileReader();
-        lector.onload = (e) => {
+        lector.onload = async (e) => {
             const dataUrl = e.target?.result;
             if (!dataUrl) return;
             setConfig((prev) => ({
@@ -426,6 +428,12 @@ function Configuracion() {
             }));
             savePhotoByUserId(user?.id, dataUrl);
             updateUser({ foto: dataUrl });
+            // Sincronizar foto_perfil en la BD (usuarios table)
+            try {
+                await usersApi.update(user?.id, { foto_perfil: dataUrl });
+            } catch (err) {
+                console.warn("No se pudo sincronizar la foto a la BD:", err);
+            }
             marcarGuardado();
         };
         lector.readAsDataURL(archivo);
@@ -435,13 +443,19 @@ function Configuracion() {
         }
     };
 
-    const eliminarFoto = () => {
+    const eliminarFoto = async () => {
         setConfig((prev) => ({
             ...prev,
             cuenta: { ...prev.cuenta, foto: "" }
         }));
         removePhotoByUserId(user?.id);
         updateUser({ foto: "" });
+        // Sincronizar el borrado de foto_perfil en la BD
+        try {
+            await usersApi.update(user?.id, { foto_perfil: "" });
+        } catch (err) {
+            console.warn("No se pudo limpiar la foto en la BD:", err);
+        }
         marcarGuardado();
     };
 

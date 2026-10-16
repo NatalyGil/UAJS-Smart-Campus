@@ -3,6 +3,7 @@ import { AuthContext } from "./auth-context";
 import { permisosDeRol, accionesDeRol } from "../utils/users";
 import { authApi } from "../utils/api";
 import { mapearUsuarioSesion } from "../utils/mapeo";
+import { syncPhotoFromBackend } from "../utils/avatar";
 import Modal from "../components/Modal/Modal";
 import "../components/Modal/Modal.css";
 import "./session-warning.css";
@@ -45,6 +46,12 @@ function AuthProvider({ children }) {
             const sesion = mapearUsuarioSesion(data);
 
             setUser(sesion);
+
+            // Sincronizar la foto de perfil desde la BD hacia localStorage
+            // para que getUserPhoto la encuentre en el resto de la sesión.
+            if (sesion.foto) {
+                syncPhotoFromBackend(sesion.id, sesion.foto);
+            }
 
             try {
                 localStorage.setItem(SESSION_KEY, JSON.stringify(sesion));
@@ -109,6 +116,11 @@ function AuthProvider({ children }) {
             }
             return siguiente;
         });
+        // Sincronizar la foto de perfil hacia localStorage por separado
+        // (getUserPhoto la lee de uajs_foto_${id}).
+        if (campos.foto !== undefined && user?.id != null) {
+            syncPhotoFromBackend(user.id, campos.foto);
+        }
     };
 
     const tienePermiso = (permiso) => {
