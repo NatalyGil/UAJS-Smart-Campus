@@ -222,33 +222,38 @@ function normalizarTipo(valor) {
 
 /**
  * Fila de `pqrs` -> modelo de la UI.
- * Completa los campos que la tabla no tiene (sede, area, solicitante,
- * asignadoA, prioridad, historial) con valores por defecto.
+ * La tabla ya persiste los campos de radicación (sede, area, asunto,
+ * identificación, prioridad, asignado_a, adjunto…). Si una fila antigua no
+ * los trae, se completan con valores por defecto para no romper la vista.
  */
 function normalizarPqrs(raw) {
     const modelo = mapearPqrs(raw);
     if (!modelo) return null;
 
+    const nombrePersona =
+        modelo.nombre || (modelo.id_usuario ? `Usuario ${modelo.id_usuario}` : "Anónimo");
+
     return {
         ...modelo,
         tipo: normalizarTipo(modelo.tipo),
         estado: modelo.estado || ESTADO_INICIAL,
-        // La tabla solo guarda `descripcion`: el asunto es su primera línea.
-        asunto: String(modelo.descripcion || "").slice(0, 80),
-        sede: "SINCELEJO",
-        tipoPerfil: "Estudiante",
-        tipoDocumento: "Cédula de ciudadanía (CC)",
-        identificacion: "",
-        nombre: modelo.id_usuario ? `Usuario ${modelo.id_usuario}` : "Anónimo",
-        telefono: "",
-        correo: "",
-        area: "PQRS",
-        solicitante: modelo.id_usuario ? `Usuario ${modelo.id_usuario}` : "Anónimo",
+        // El asunto se persiste; si falta, se usa la primera línea de la
+        // descripción (comportamiento anterior).
+        asunto: modelo.asunto || String(modelo.descripcion || "").slice(0, 80),
+        sede: modelo.sede || "SINCELEJO",
+        tipoPerfil: modelo.tipoPerfil || "Estudiante",
+        tipoDocumento: modelo.tipoDocumento || "Cédula de ciudadanía (CC)",
+        identificacion: modelo.identificacion || "",
+        nombre: nombrePersona,
+        telefono: modelo.telefono || "",
+        correo: modelo.correo || "",
+        area: modelo.area || "PQRS",
+        solicitante: modelo.solicitante || nombrePersona,
         usuarioId: modelo.id_usuario ?? null,
-        asignadoA: "",
-        prioridad: "Media",
+        asignadoA: modelo.asignadoA || "",
+        prioridad: modelo.prioridad || "Media",
         historial: [],
-        adjunto: null
+        adjunto: modelo.adjunto ?? null
     };
 }
 
@@ -264,7 +269,7 @@ function conCamposLocales(modelo, remoto) {
         nombre: modelo.nombre ?? remoto?.nombre ?? "Anónimo",
         correo: modelo.correo ?? remoto?.correo ?? "",
         solicitante: modelo.solicitante ?? remoto?.solicitante ?? "Anónimo",
-        // El controller ignora respuesta/fecha_respuesta en POST y PUT.
+        // El controller persiste respuesta/fecha_respuesta en POST y PUT.
         respuesta: modelo.respuesta || remoto?.respuesta || "",
         fecha_respuesta: modelo.fecha_respuesta || remoto?.fecha_respuesta || null
     };

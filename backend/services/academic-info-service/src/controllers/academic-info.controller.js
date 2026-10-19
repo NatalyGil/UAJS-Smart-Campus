@@ -1,5 +1,13 @@
 const pool = require('../config/database');
 
+// Lista blanca de columnas que el frontend puede enviar. Evita inyección de
+// columnas y que un PUT parcial vacíe columnas NOT NULL (mismo patrón que
+// feedback-service y requests-service).
+const CAMPOS = [
+    'id_usuario', 'titulo', 'categoria', 'fecha', 'autor', 'contenido',
+    'estado', 'programa', 'tipo_vigencia', 'vigencia', 'destacado'
+];
+
 async function getAll(req, res, next) {
     try {
         const [rows] = await pool.query(`
@@ -34,13 +42,24 @@ async function getOne(req, res, next) {
 
 async function create(req, res, next) {
     try {
-        const { titulo, categoria, fecha, autor, contenido, id_usuario } = req.body;
+        const { titulo, categoria, fecha, autor, contenido } = req.body;
         if (!titulo || !categoria || !fecha || !autor || !contenido) {
             return res.status(400).json({ error: 'Faltan campos requeridos' });
         }
+
+        // Solo se insertan los campos presentes: el resto toma su DEFAULT.
+        const columnas = [];
+        const valores = [];
+        for (const campo of CAMPOS) {
+            if (req.body[campo] !== undefined && req.body[campo] !== null) {
+                columnas.push(campo);
+                valores.push(campo === 'id_usuario' ? req.body[campo] || 1 : req.body[campo]);
+            }
+        }
+
         const [result] = await pool.query(
-            'INSERT INTO info_academica (titulo, categoria, fecha, autor, contenido, id_usuario) VALUES (?, ?, ?, ?, ?, ?)',
-            [titulo, categoria, fecha, autor, contenido, id_usuario || 1]
+            `INSERT INTO info_academica (${columnas.join(', ')}) VALUES (${columnas.map(() => '?').join(', ')})`,
+            valores
         );
         const [newPub] = await pool.query('SELECT * FROM info_academica WHERE id_publicacion = ?', [result.insertId]);
         res.status(201).json({ data: newPub[0] });
@@ -52,10 +71,24 @@ async function create(req, res, next) {
 async function update(req, res, next) {
     try {
         const { id } = req.params;
-        const { titulo, categoria, fecha, autor, contenido, id_usuario } = req.body;
+
+        // Actualización parcial: solo las columnas presentes en el body.
+        const asignaciones = [];
+        const valores = [];
+        for (const campo of CAMPOS) {
+            if (req.body[campo] !== undefined) {
+                asignaciones.push(`${campo} = ?`);
+                valores.push(req.body[campo]);
+            }
+        }
+        if (!asignaciones.length) {
+            return res.status(400).json({ error: 'Nada que actualizar' });
+        }
+        valores.push(id);
+
         const [result] = await pool.query(
-            'UPDATE info_academica SET titulo = ?, categoria = ?, fecha = ?, autor = ?, contenido = ?, id_usuario = ? WHERE id_publicacion = ?',
-            [titulo, categoria, fecha, autor, contenido, id_usuario, id]
+            `UPDATE info_academica SET ${asignaciones.join(', ')} WHERE id_publicacion = ?`,
+            valores
         );
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Publicación no encontrada' });

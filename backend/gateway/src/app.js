@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
@@ -34,6 +35,22 @@ const proxyFor = (service, prefix) => createProxyMiddleware({
 		}
 	}
 });
+
+// Anti fuerza bruta: limita SOLO los intentos de inicio de sesión.
+// 5 peticiones por minuto por IP; el resto de endpoints no se ven afectados.
+const loginLimiter = rateLimit({
+	windowMs: 60 * 1000,
+	limit: 5,
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: {
+		error: 'Demasiados intentos de inicio de sesión. Vuelve a intentarlo en un minuto.'
+	}
+});
+
+app.use('/api/auth/login', (req, res, next) =>
+	req.method === 'POST' ? loginLimiter(req, res, next) : next()
+);
 
 // Todo /api/* pasa por verificación de JWT salvo login y register.
 app.use('/api', authMiddleware);

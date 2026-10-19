@@ -1,12 +1,12 @@
 // ============================================================
 // INFORMACIÓN ACADÉMICA — datos del academic-info-service (vía gateway).
 //
-// La tabla `info_academica` tiene una columna `estado`, pero el controller
-// NO la incluye en el INSERT ni en el UPDATE: siempre queda en 'Publicado'.
-// Para que el contenido sea visible se traduce 'Publicado' -> 'Aprobada'
-// (el estado que la UI usa como "visible para todos") y los cambios de
-// estado hechos en la UI se conservan en la colección, aunque el backend
-// los descarte en la siguiente lectura.
+// La tabla `info_academica` tiene una columna `estado`. El controller la
+// persiste; para que el contenido sea visible se traduce 'Publicado' ->
+// 'Aprobada' (el estado que la UI usa como "visible para todos").
+//
+// Los campos programa, tipo_vigencia, vigencia y destacado también se
+// persisten en la tabla desde la extensión del esquema.
 //
 // La colección "info_academica" del store entrega primero la caché local y
 // después la data real del backend, que repinta la vista con useColeccion.
@@ -165,17 +165,17 @@ function normalizarPublicacion(raw) {
     return {
         ...modelo,
         estado: normalizarEstado(modelo.estado),
-        // La tabla no tiene estas columnas: se completan con el patrón local
-        // para que la lista no se rompa al cambiar de origen de datos.
-        programa: "Toda la comunidad",
-        tipoVigencia: "Permanente",
-        vigencia: "",
-        destacado: false,
+        // La tabla ya persiste estos campos; si faltan se usa el patrón local
+        // para que la lista no se rompa con filas antiguas.
+        programa: modelo.programa || "Toda la comunidad",
+        tipoVigencia: modelo.tipoVigencia || "Permanente",
+        vigencia: modelo.vigencia || "",
+        destacado: Boolean(modelo.destacado),
         usuario: modelo.usuario || modelo.autor
     };
 }
 
-/** Conserva los campos que el academic-info-service no persiste. */
+/** Conserva los campos que la UI gestiona aunque el backend los normalice. */
 function conCamposLocales(modelo, remoto) {
     return {
         ...modelo,

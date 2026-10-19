@@ -321,24 +321,50 @@ export function mapearPqrs(raw) {
         id: raw.id_pqrs,
         codigo: `PQRS-${raw.id_pqrs}`,
         id_usuario: raw.id_usuario,
+        usuarioId: raw.id_usuario ?? null,
         tipo: texto(raw.tipo),
         fecha: soloFecha(raw.fecha),
         estado: texto(raw.estado, "Abierta"),
         descripcion: texto(raw.descripcion),
         respuesta: texto(raw.respuesta),
-        fecha_respuesta: soloFecha(raw.fecha_respuesta)
+        fecha_respuesta: soloFecha(raw.fecha_respuesta),
+        // Campos de radicación (persistidos desde la extensión del esquema).
+        sede: texto(raw.sede, "SINCELEJO"),
+        area: texto(raw.area, "PQRS"),
+        asunto: texto(raw.asunto),
+        tipoPerfil: texto(raw.tipo_perfil, "Estudiante"),
+        tipoDocumento: texto(raw.tipo_documento),
+        identificacion: texto(raw.identificacion),
+        nombre: texto(raw.nombre),
+        telefono: texto(raw.telefono),
+        correo: texto(raw.correo),
+        prioridad: texto(raw.prioridad, "Media"),
+        asignadoA: texto(raw.asignado_a),
+        adjunto: raw.adjunto ?? null
     };
 }
 
 export function mapearPqrsAPayload(modelo) {
     return {
-        id_usuario: modelo.id_usuario ?? null,
+        id_usuario: modelo.id_usuario ?? modelo.usuarioId ?? null,
         tipo: modelo.tipo,
         fecha: modelo.fecha || soloFecha(new Date().toISOString()),
         estado: modelo.estado || "Abierta",
         descripcion: modelo.descripcion,
         respuesta: modelo.respuesta || null,
-        fecha_respuesta: modelo.fecha_respuesta || null
+        fecha_respuesta: modelo.fecha_respuesta || null,
+        sede: modelo.sede || "SINCELEJO",
+        area: modelo.area || "PQRS",
+        asunto: modelo.asunto || "",
+        tipo_perfil: modelo.tipoPerfil || "Estudiante",
+        tipo_documento: modelo.tipoDocumento || "",
+        identificacion: modelo.identificacion || "",
+        nombre: modelo.nombre || "",
+        telefono: modelo.telefono || "",
+        correo: modelo.correo || "",
+        prioridad: modelo.prioridad || "Media",
+        asignado_a: modelo.asignadoA || "",
+        adjunto: modelo.adjunto ?? null
     };
 }
 
@@ -356,7 +382,12 @@ export function mapearPublicacion(raw) {
         contenido: texto(raw.contenido),
         id_usuario: raw.id_usuario,
         estado: texto(raw.estado, "Publicado"),
-        usuario: texto(raw.usuario_nombre)
+        usuario: texto(raw.usuario_nombre),
+        // Campos persistidos desde la extensión del esquema.
+        programa: texto(raw.programa, "Toda la comunidad"),
+        tipoVigencia: texto(raw.tipo_vigencia, "Permanente"),
+        vigencia: soloFecha(raw.vigencia),
+        destacado: Boolean(Number(raw.destacado))
     };
 }
 
@@ -368,7 +399,11 @@ export function mapearPublicacionAPayload(modelo) {
         fecha: modelo.fecha || soloFecha(new Date().toISOString()),
         autor: modelo.autor,
         contenido: modelo.contenido,
-        estado: modelo.estado || "Publicado"
+        estado: modelo.estado || "Publicado",
+        programa: modelo.programa || "Toda la comunidad",
+        tipo_vigencia: modelo.tipoVigencia || "Permanente",
+        vigencia: modelo.vigencia || null,
+        destacado: modelo.destacado ? 1 : 0
     };
 }
 

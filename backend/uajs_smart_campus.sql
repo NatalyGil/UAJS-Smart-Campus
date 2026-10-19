@@ -61,7 +61,9 @@ CREATE TABLE usuarios (
     updated_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_usuarios_rol FOREIGN KEY (id_rol) REFERENCES roles (id_rol),
     INDEX idx_usuarios_estado (estado),
-    INDEX idx_usuarios_rol (id_rol)
+    INDEX idx_usuarios_rol (id_rol),
+    -- Compuesto para el filtro habitual "usuarios activos por rol".
+    INDEX idx_usuarios_estado_rol (estado, id_rol)
 ) ENGINE=InnoDB;
 
 -- ============================================================
@@ -118,7 +120,10 @@ CREATE TABLE inscripciones_eventos (
     fecha_inscripcion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_inscripciones_evento FOREIGN KEY (id_evento) REFERENCES eventos_y_actividades (id_evento) ON DELETE CASCADE,
     CONSTRAINT fk_inscripciones_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario) ON DELETE CASCADE,
-    UNIQUE KEY uq_inscripcion (id_evento, id_usuario)
+    UNIQUE KEY uq_inscripcion (id_evento, id_usuario),
+    -- Cubre el listado de inscritos por evento ordenado por fecha
+    -- (events-service: WHERE id_evento = ? ORDER BY fecha_inscripcion).
+    INDEX idx_inscripciones_evento_fecha (id_evento, fecha_inscripcion)
 ) ENGINE=InnoDB;
 
 -- ============================================================
@@ -206,7 +211,10 @@ CREATE TABLE notificaciones (
     referencia_id      INT          DEFAULT NULL,
     fecha_envio        DATETIME     DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_notificaciones_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario) ON DELETE CASCADE,
-    INDEX idx_notificaciones_usuario_leida (id_usuario, leida)
+    INDEX idx_notificaciones_usuario_leida (id_usuario, leida),
+    -- Cubre el listado por usuario ordenado por fecha
+    -- (notifications-service: WHERE id_usuario = ? ORDER BY fecha_envio DESC).
+    INDEX idx_notificaciones_usuario_fecha (id_usuario, fecha_envio)
 ) ENGINE=InnoDB;
 
 -- ============================================================
@@ -224,6 +232,19 @@ CREATE TABLE pqrs (
     descripcion    TEXT         NOT NULL,
     respuesta      TEXT,
     fecha_respuesta DATE        DEFAULT NULL,
+    -- Campos de radicación que el frontend ya modela (utils/pqrs.js).
+    sede            VARCHAR(40)  NOT NULL DEFAULT 'SINCELEJO',
+    area            VARCHAR(120) NOT NULL DEFAULT 'PQRS',
+    asunto          VARCHAR(200) NOT NULL DEFAULT '',
+    tipo_perfil     VARCHAR(40)  NOT NULL DEFAULT 'Estudiante',
+    tipo_documento  VARCHAR(80)  NOT NULL DEFAULT '',
+    identificacion  VARCHAR(30)  NOT NULL DEFAULT '',
+    nombre          VARCHAR(120) NOT NULL DEFAULT '',
+    telefono        VARCHAR(30)  NOT NULL DEFAULT '',
+    correo          VARCHAR(120) NOT NULL DEFAULT '',
+    prioridad       VARCHAR(20)  NOT NULL DEFAULT 'Media',
+    asignado_a      VARCHAR(120) NOT NULL DEFAULT '',
+    adjunto         VARCHAR(255) DEFAULT NULL,
     created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_pqrs_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario) ON DELETE SET NULL,
@@ -244,6 +265,11 @@ CREATE TABLE info_academica (
     contenido      TEXT         NOT NULL,
     imagen         VARCHAR(255) DEFAULT NULL,
     estado         VARCHAR(30)  NOT NULL DEFAULT 'Publicado',
+    -- Campos que el frontend ya modela (utils/infoAcademica.js).
+    programa       VARCHAR(120) NOT NULL DEFAULT 'Toda la comunidad',
+    tipo_vigencia  VARCHAR(20)  NOT NULL DEFAULT 'Permanente',
+    vigencia       DATE         DEFAULT NULL,
+    destacado      TINYINT(1)   NOT NULL DEFAULT 0,
     created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_info_academica_usuario FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario) ON DELETE SET NULL,
@@ -293,10 +319,10 @@ INSERT INTO roles (id_rol, nombre_rol, descripcion) VALUES
     (4, 'Administrativo',  'Personal administrativo');
 
 INSERT INTO servicios (id_servicio, nombre, descripcion) VALUES
-    (1, 'Solicitudes', 'Peticiones y tramites academicos'),
+    (1, 'Solicitudes', 'Peticiones y trámites académicos'),
     (2, 'Reservas',    'Reservas de espacios y equipos'),
     (3, 'Eventos',     'Eventos y actividades institucionales'),
-    (4, 'Recursos',    'Prestamos de recursos'),
+    (4, 'Recursos',    'Préstamos de recursos'),
     (5, 'PQRS',        'Peticiones, quejas y reclamos');
 
 -- Contraseña = el identificacion del usuario + "123" en texto plano.
@@ -334,17 +360,17 @@ VALUES
     (1,  'Auditorio Principal',      'REC-001', 'Auditorios',  'Auditorio para eventos institucionales', 'Edificio A - Piso 1', 300, 'Disponible', 'Disponible'),
     (2,  'Sala de Conferencias 1',   'REC-002', 'Salas',       'Sala para reuniones y talleres',         'Edificio B - Piso 2', 40,  'Disponible', 'Disponible'),
     (3,  'Sala de Conferencias 2',   'REC-003', 'Salas',       'Sala para reuniones',                    'Edificio B - Piso 2', 30,  'Ocupada',    'Ocupada'),
-    (4,  'Laboratorio de Informatica 1', 'REC-004', 'Laboratorios', 'Laboratorio de computacion',        'Edificio C - Piso 1', 30,  'Disponible', 'Disponible'),
-    (5,  'Laboratorio de Fisica',    'REC-005', 'Laboratorios', 'Laboratorio de practicas',               'Edificio C - Piso 2', 25,  'Disponible', 'Disponible'),
-    (6,  'Proyector Portatil 1',     'REC-006', 'Equipos',     'Proyector para presentaciones',          'Bodega tecnologica', 1,     'Disponible', 'Disponible'),
-    (7,  'Proyector Portatil 2',     'REC-007', 'Equipos',     'Proyector para presentaciones',          'Bodega tecnologica', 1,     'Disponible', 'Disponible'),
+    (4,  'Laboratorio de Informatica 1', 'REC-004', 'Laboratorios', 'Laboratorio de computación',        'Edificio C - Piso 1', 30,  'Disponible', 'Disponible'),
+    (5,  'Laboratorio de Fisica',    'REC-005', 'Laboratorios', 'Laboratorio de prácticas',               'Edificio C - Piso 2', 25,  'Disponible', 'Disponible'),
+    (6,  'Proyector Portatil 1',     'REC-006', 'Equipos',     'Proyector para presentaciones',          'Bodega tecnológica', 1,     'Disponible', 'Disponible'),
+    (7,  'Proyector Portatil 2',     'REC-007', 'Equipos',     'Proyector para presentaciones',          'Bodega tecnológica', 1,     'Disponible', 'Disponible'),
     (8,  'Sala de Estudio 1',        'REC-008', 'Salas',       'Sala de estudio individual',              'Biblioteca - Piso 3', 8,   'Disponible', 'Disponible'),
     (9,  'Sala de Estudio 2',        'REC-009', 'Salas',       'Sala de estudio individual',              'Biblioteca - Piso 3', 8,   'Mantenimiento','Mantenimiento'),
      (10, 'Auditorio VIP',            'REC-010', 'Auditorios',  'Auditorio pequeño para reuniones',         'Edificio A - Piso 3', 60,  'Disponible', 'Disponible'),
      (11, 'Sala de Estudio 3',        'REC-011', 'Salas',       'Sala de estudio grupal',                   'Biblioteca - Piso 4', 12,  'Disponible', 'Disponible'),
      (12, 'Laboratorio de Química',   'REC-012', 'Laboratorios', 'Laboratorio para prácticas de química',    'Edificio D - Piso 1', 20,  'Disponible', 'Disponible'),
-     (13, 'Trípode de Audio',         'REC-013', 'Equipos',     'Micrófonos y mesa de sonido',              'Bodega tecnologica', 1,     'Disponible', 'Disponible'),
-     (14, 'Kit Audiovisual',          'REC-014', 'Equipos',     'Cámara, micrófono y luces para eventos',    'Bodega tecnologica', 1,     'En mantenimiento', 'En mantenimiento');
+     (13, 'Trípode de Audio',         'REC-013', 'Equipos',     'Micrófonos y mesa de sonido',              'Bodega tecnológica', 1,     'Disponible', 'Disponible'),
+     (14, 'Kit Audiovisual',          'REC-014', 'Equipos',     'Cámara, micrófono y luces para eventos',    'Bodega tecnológica', 1,     'En mantenimiento', 'En mantenimiento');
 
 INSERT INTO eventos_y_actividades
     (id_evento, nombre_evento, descripcion, fecha, hora_inicio, hora_fin, ubicacion, tipo_evento, estado, id_usuario, cupo, inscritos)
@@ -369,82 +395,92 @@ INSERT INTO inscripciones_eventos (id_evento, id_usuario) VALUES
 INSERT INTO solicitudes
     (id_solicitud, codigo, tipo, id_usuario, id_servicio, id_responsable, prioridad, dependencia, fecha_solicitud, descripcion, solicitante, estado, respuesta)
 VALUES
-    (1, 'SOL-2026-001', 'Reserva de auditorio',      4,  2, 2, 'Media', 'Bienestar Universitario',         '2026-09-01', 'Reserva del auditorio principal para la catedra de inteligencia artificial aplicada.', 'Andres Torres',    'EN_PROCESO', 'Se esta confirmando agenda y recursos audiovisuales.'),
-    (2, 'SOL-2026-002', 'Constancia academica',      6,  1, NULL, 'Alta', 'Registro y Control',          '2026-09-02', 'Solicitud de constancia de notas para tramites administrativos del semestre actual.',      'Valentina Morales','EN_REVISION', ''),
-    (3, 'SOL-2026-003', 'Reserva de laboratorio',    10, 2, 2, 'Media', 'Laboratorios',                '2026-09-04', 'Uso del laboratorio de informatica 3 para practica de redes y configuracion basica.',      'Isabella Ramirez', 'RESUELTA',    'Reserva cerrada sin incidencias.'),
-    (4, 'SOL-2026-004', 'Inscripcion a evento',      14, 3, NULL, 'Baja',  'Bienestar Universitario',         '2026-09-05', 'Inscripcion al taller de emprendimiento y liderazgo del programa academico.',            'Camila Herrera',   'REGISTRADA',  ''),
-    (5, 'SOL-2026-005', 'Soporte tecnico',           17, 5, 2, 'Alta',  'Infraestructura Tecnologica',  '2026-09-06', 'Reporte de fallas en los equipos del laboratorio de sistemas y conexion a red.',              'Daniela Ortiz',    'PAUSADA',     'En espera de respuesta del proveedor de red.'),
-    (6, 'SOL-2026-006', 'Prestamo de equipos',       4,  4, 2, 'Media', 'Logistica',                   '2026-09-08', 'Prestamo de dos proyectores para la feria de empleabilidad y actividades de ingreso.',    'Andres Torres',    'CERRADA',     'Equipos devueltos y revisados.');
+    (1, 'SOL-2026-001', 'Reserva de auditorio',      4,  2, 2, 'Media', 'Bienestar Universitario',         '2026-09-01', 'Reserva del auditorio principal para la cátedra de inteligencia artificial aplicada.', 'Andrés Torres',    'EN_PROCESO', 'Se está confirmando agenda y recursos audiovisuales.'),
+    (2, 'SOL-2026-002', 'Constancia académica',      6,  1, NULL, 'Alta', 'Registro y Control',          '2026-09-02', 'Solicitud de constancia de notas para trámites administrativos del semestre actual.',      'Valentina Morales','EN_REVISION', ''),
+    (3, 'SOL-2026-003', 'Reserva de laboratorio',    10, 2, 2, 'Media', 'Laboratorios',                '2026-09-04', 'Uso del laboratorio de informática 3 para práctica de redes y configuración básica.',      'Isabella Ramírez', 'RESUELTA',    'Reserva cerrada sin incidencias.'),
+    (4, 'SOL-2026-004', 'Inscripción a evento',      14, 3, NULL, 'Baja',  'Bienestar Universitario',         '2026-09-05', 'Inscripción al taller de emprendimiento y liderazgo del programa académico.',            'Camila Herrera',   'REGISTRADA',  ''),
+    (5, 'SOL-2026-005', 'Soporte técnico',           17, 5, 2, 'Alta',  'Infraestructura Tecnológica',  '2026-09-06', 'Reporte de fallas en los equipos del laboratorio de sistemas y conexión a red.',              'Daniela Ortiz',    'PAUSADA',     'En espera de respuesta del proveedor de red.'),
+    (6, 'SOL-2026-006', 'Préstamo de equipos',       4,  4, 2, 'Media', 'Logística',                   '2026-09-08', 'Préstamo de dos proyectores para la feria de empleabilidad y actividades de ingreso.',    'Andrés Torres',    'CERRADA',     'Equipos devueltos y revisados.');
 
 INSERT INTO historial_solicitudes
     (id_solicitud, tipo, estado, responsable, usuario, fecha, descripcion)
 VALUES
-    (1, 'CREACION',  'REGISTRADA',  '',        'Andres Torres',  '2026-09-01 09:00', 'Solicitud registrada.'),
-    (1, 'ESTADO',    'EN_REVISION', 'Carlos Mendez', 'Carlos Mendez', '2026-09-01 09:15', 'Verificacion de disponibilidad y logistica del espacio.'),
-    (1, 'ASIGNACION', 'ASIGNADA',   'Carlos Mendez', 'Carlos Mendez', '2026-09-02 10:30', 'Auditorio principal asignado como responsable.'),
-    (1, 'ESTADO',    'EN_PROCESO', 'Carlos Mendez', 'Carlos Mendez', '2026-09-02 11:05', 'Se esta confirmando agenda y recursos audiovisuales.'),
+    (1, 'CREACION',  'REGISTRADA',  '',        'Andrés Torres',  '2026-09-01 09:00', 'Solicitud registrada.'),
+    (1, 'ESTADO',    'EN_REVISION', 'Carlos Méndez', 'Carlos Méndez', '2026-09-01 09:15', 'Verificación de disponibilidad y logística del espacio.'),
+    (1, 'ASIGNACION', 'ASIGNADA',   'Carlos Méndez', 'Carlos Méndez', '2026-09-02 10:30', 'Auditorio principal asignado como responsable.'),
+    (1, 'ESTADO',    'EN_PROCESO', 'Carlos Méndez', 'Carlos Méndez', '2026-09-02 11:05', 'Se está confirmando agenda y recursos audiovisuales.'),
 
     (2, 'CREACION',  'REGISTRADA',  '',               'Valentina Morales', '2026-09-02 08:20', 'Solicitud registrada.'),
-    (2, 'NOTA',      NULL,          '',               'Carlos Mendez',     '2026-09-02 09:00', 'Se solicita documento de identidad adicional.'),
+    (2, 'NOTA',      NULL,          '',               'Carlos Méndez',     '2026-09-02 09:00', 'Se solicita documento de identidad adicional.'),
 
-    (3, 'CREACION',  'REGISTRADA',  '',               'Isabella Ramirez',  '2026-09-04 07:40', 'Solicitud registrada.'),
-    (3, 'ESTADO',    'EN_REVISION', 'Carlos Mendez',  'Carlos Mendez',     '2026-09-04 08:00', 'Verificacion de disponibilidad del laboratorio.'),
-    (3, 'ASIGNACION', 'ASIGNADA',   'Carlos Mendez',  'Carlos Mendez',     '2026-09-05 09:10', 'Laboratorio asignado para la practica.'),
-    (3, 'ESTADO',    'EN_PROCESO',  'Carlos Mendez',  'Carlos Mendez',     '2026-09-06 14:00', 'Sesion ejecutada con equipos activos.'),
-    (3, 'ESTADO',    'RESUELTA',    'Carlos Mendez',  'Carlos Mendez',     '2026-09-07 16:30', 'Reserva cerrada sin incidencias.'),
+    (3, 'CREACION',  'REGISTRADA',  '',               'Isabella Ramírez',  '2026-09-04 07:40', 'Solicitud registrada.'),
+    (3, 'ESTADO',    'EN_REVISION', 'Carlos Méndez',  'Carlos Méndez',     '2026-09-04 08:00', 'Verificación de disponibilidad del laboratorio.'),
+    (3, 'ASIGNACION', 'ASIGNADA',   'Carlos Méndez',  'Carlos Méndez',     '2026-09-05 09:10', 'Laboratorio asignado para la práctica.'),
+    (3, 'ESTADO',    'EN_PROCESO',  'Carlos Méndez',  'Carlos Méndez',     '2026-09-06 14:00', 'Sesión ejecutada con equipos activos.'),
+    (3, 'ESTADO',    'RESUELTA',    'Carlos Méndez',  'Carlos Méndez',     '2026-09-07 16:30', 'Reserva cerrada sin incidencias.'),
 
     (4, 'CREACION',  'REGISTRADA',  '',               'Camila Herrera',    '2026-09-05 10:10', 'Solicitud registrada.'),
 
     (5, 'CREACION',  'REGISTRADA',  '',               'Daniela Ortiz',     '2026-09-06 08:00', 'Solicitud registrada.'),
-    (5, 'ESTADO',    'EN_REVISION', 'Carlos Mendez',  'Carlos Mendez',     '2026-09-06 08:30', 'Caso asignado a soporte tecnologico.'),
-    (5, 'ASIGNACION', 'ASIGNADA',   'Carlos Mendez',  'Carlos Mendez',     '2026-09-07 09:00', 'Tecnico responsable definido para la revision.'),
-    (5, 'ESTADO',    'EN_PROCESO',  'Carlos Mendez',  'Carlos Mendez',     '2026-09-07 11:20', 'Diagnostico inicial de la falla.'),
-    (5, 'PAUSA',     'PAUSADA',     'Carlos Mendez',  'Carlos Mendez',     '2026-09-08 10:00', 'En espera de respuesta del proveedor de red.'),
+    (5, 'ESTADO',    'EN_REVISION', 'Carlos Méndez',  'Carlos Méndez',     '2026-09-06 08:30', 'Caso asignado a soporte tecnológico.'),
+    (5, 'ASIGNACION', 'ASIGNADA',   'Carlos Méndez',  'Carlos Méndez',     '2026-09-07 09:00', 'Técnico responsable definido para la revisión.'),
+    (5, 'ESTADO',    'EN_PROCESO',  'Carlos Méndez',  'Carlos Méndez',     '2026-09-07 11:20', 'Diagnóstico inicial de la falla.'),
+    (5, 'PAUSA',     'PAUSADA',     'Carlos Méndez',  'Carlos Méndez',     '2026-09-08 10:00', 'En espera de respuesta del proveedor de red.'),
 
-    (6, 'CREACION',  'REGISTRADA',  '',               'Andres Torres',     '2026-09-08 06:50', 'Solicitud registrada.'),
-    (6, 'ESTADO',    'EN_REVISION', 'Carlos Mendez',  'Carlos Mendez',     '2026-09-08 07:15', 'Verificacion de disponibilidad de equipos.'),
-    (6, 'ASIGNACION', 'ASIGNADA',   'Carlos Mendez',  'Carlos Mendez',     '2026-09-09 08:40', 'Dos equipos asignados al evento.'),
-    (6, 'ESTADO',    'EN_PROCESO',  'Carlos Mendez',  'Carlos Mendez',     '2026-09-10 13:00', 'Entrega finalizada para la actividad.'),
-    (6, 'ESTADO',    'RESUELTA',    'Carlos Mendez',  'Carlos Mendez',     '2026-09-12 17:20', 'Equipos devueltos y revisados.'),
-    (6, 'ESTADO',    'CERRADA',     'Carlos Mendez',  'Carlos Mendez',     '2026-09-13 09:00', 'Solicitud cerrada por el sistema.');
+    (6, 'CREACION',  'REGISTRADA',  '',               'Andrés Torres',     '2026-09-08 06:50', 'Solicitud registrada.'),
+    (6, 'ESTADO',    'EN_REVISION', 'Carlos Méndez',  'Carlos Méndez',     '2026-09-08 07:15', 'Verificación de disponibilidad de equipos.'),
+    (6, 'ASIGNACION', 'ASIGNADA',   'Carlos Méndez',  'Carlos Méndez',     '2026-09-09 08:40', 'Dos equipos asignados al evento.'),
+    (6, 'ESTADO',    'EN_PROCESO',  'Carlos Méndez',  'Carlos Méndez',     '2026-09-10 13:00', 'Entrega finalizada para la actividad.'),
+    (6, 'ESTADO',    'RESUELTA',    'Carlos Méndez',  'Carlos Méndez',     '2026-09-12 17:20', 'Equipos devueltos y revisados.'),
+    (6, 'ESTADO',    'CERRADA',     'Carlos Méndez',  'Carlos Méndez',     '2026-09-13 09:00', 'Solicitud cerrada por el sistema.');
 
 INSERT INTO reservas
     (id_reserva, id_usuario, id_recurso, fecha_reserva, hora_inicio, hora_fin, motivo, estado)
 VALUES
     (1,  4,  1,  '2026-09-16', '08:00:00', '11:00:00', 'Bienvenida a nuevos estudiantes',   'Confirmada'),
     (2,  6,  2,  '2026-09-18', '14:00:00', '17:00:00', 'Taller de emprendimiento',          'Confirmada'),
-    (3,  10, 4,  '2026-09-19', '09:00:00', '12:00:00', 'Practica de redes',                  'Confirmada'),
-    (4,  14, 10, '2026-09-25', '10:00:00', '12:30:00', 'Seminario de investigacion',        'Confirmada'),
-    (5,  17, 3,  '2026-09-17', '09:00:00', '11:00:00', 'Reunion de proyecto',                'Pendiente'),
+    (3,  10, 4,  '2026-09-19', '09:00:00', '12:00:00', 'Práctica de redes',                  'Confirmada'),
+    (4,  14, 10, '2026-09-25', '10:00:00', '12:30:00', 'Seminario de investigación',        'Confirmada'),
+    (5,  17, 3,  '2026-09-17', '09:00:00', '11:00:00', 'Reunión de proyecto',                'Pendiente'),
     (6,  4,  6,  '2026-09-22', '08:00:00', '18:00:00', 'Feria de empleabilidad',             'Confirmada'),
     (7,  6,  7,  '2026-09-22', '08:00:00', '18:00:00', 'Feria de empleabilidad',             'Confirmada'),
-    (8,  10, 5,  '2026-09-21', '10:00:00', '13:00:00', 'Practica de fisica',                 'Cancelada'),
-    (9,  14, 8,  '2026-09-20', '07:00:00', '09:00:00', 'Sesion de estudio',                  'Confirmada'),
+    (8,  10, 5,  '2026-09-21', '10:00:00', '13:00:00', 'Práctica de física',                 'Cancelada'),
+    (9,  14, 8,  '2026-09-20', '07:00:00', '09:00:00', 'Sesión de estudio',                  'Confirmada'),
     (10, 17, 2,  '2026-09-23', '15:00:00', '17:00:00', 'Taller grupal',                      'Pendiente'),
-    (11, 4,  10, '2026-09-24', '09:00:00', '11:00:00', 'Reunion de coordinacion',           'Confirmada'),
-    (12, 6,  4,  '2026-09-26', '14:00:00', '17:00:00', 'Practica de bases de datos',         'Confirmada');
+    (11, 4,  10, '2026-09-24', '09:00:00', '11:00:00', 'Reunión de coordinación',           'Confirmada'),
+    (12, 6,  4,  '2026-09-26', '14:00:00', '17:00:00', 'Práctica de bases de datos',         'Confirmada');
 
 INSERT INTO notificaciones
     (id_usuario, titulo, mensaje, tipo_notificacion, icono, leida, fecha_envio)
 VALUES
     (1, 'Solicitud recibida',      'Tu solicitud SOL-2026-001 fue registrada correctamente.',  'solicitud',  'check',  0, '2026-09-01 09:00:00'),
-    (1, 'Reserva confirmada',      'La reserva del Auditorio Principal esta confirmada.',        'reserva',    'calendar',0, '2026-09-01 12:30:00'),
-    (4, 'Solicitud en revision',   'Tu solicitud esta siendo revisada por el area de registro.', 'solicitud',  'clock',  0, '2026-09-02 08:20:00'),
-    (4, 'Evento proximo',          'La bienvenida a nuevos estudiantes sera el 15 de septiembre.', 'evento',    'megaphone', 0, '2026-09-03 10:00:00'),
+    (1, 'Reserva confirmada',      'La reserva del Auditorio Principal está confirmada.',        'reserva',    'calendar',0, '2026-09-01 12:30:00'),
+    (4, 'Solicitud en revisión',   'Tu solicitud está siendo revisada por el área de registro.', 'solicitud',  'clock',  0, '2026-09-02 08:20:00'),
+    (4, 'Evento próximo',          'La bienvenida a nuevos estudiantes será el 15 de septiembre.', 'evento',    'megaphone', 0, '2026-09-03 10:00:00'),
     (6, 'Recordatorio de taller',  'El taller de emprendimiento comienza a las 2:00 p. m.',      'evento',     'bell',   1, '2026-09-04 09:15:00'),
-    (17,'Soporte en pausa',        'Tu caso esta en espera del proveedor de red.',               'solicitud',  'pause',  0, '2026-09-08 10:05:00');
+    (17,'Soporte en pausa',        'Tu caso está en espera del proveedor de red.',               'solicitud',  'pause',  0, '2026-09-08 10:05:00');
 
-INSERT INTO pqrs (id_usuario, tipo, fecha, estado, descripcion, respuesta, fecha_respuesta) VALUES
-    (4,  'Peticion',   '2026-09-03', 'Resuelta',   'Solicitud deactualizacion de la informacion academica en el portal.',  'Informacion actualizada.', '2026-09-05'),
-    (6,  'Queja',      '2026-09-04', 'En proceso', 'Los proyectores del salon no encienden durante las clases.',            NULL, NULL),
-    (10, 'Reclamo',    '2026-09-06', 'Abierta',    'El laboratorio de fisica no tiene elementos de seguridad disponibles.',  NULL, NULL),
-    (14, 'Sugerencia', '2026-09-08', 'Resuelta',   'Habilitar un punto de recarga adicional en la biblioteca.',                'Punto habilitado en piso 2.', '2026-09-10'),
-    (17, 'Peticion',   '2026-09-10', 'Abierta',    'Solicitar segunda salida del laboratorio por actividades CAMPUS.',       NULL, NULL);
+INSERT INTO pqrs
+    (id_usuario, tipo, fecha, estado, descripcion, respuesta, fecha_respuesta,
+     sede, area, asunto, tipo_perfil, tipo_documento, identificacion, nombre, telefono, correo, prioridad, asignado_a, adjunto)
+VALUES
+    (4,  'Petición',   '2026-09-03', 'Resuelta',   'Solicitud de actualización de la información académica en el portal.',  'Información actualizada.', '2026-09-05',
+        'SINCELEJO', 'Admisiones y Registro', 'Actualización de datos académicos', 'Estudiante', 'Cédula de ciudadanía (CC)', '1023456786', 'Andrés Torres', '3001234504', 'andres.torres@uajs.edu.co', 'Media', 'Admisiones y Registro', NULL),
+    (6,  'Queja',      '2026-09-04', 'En proceso', 'Los proyectores del salón no encienden durante las clases.',            NULL, NULL,
+        'SINCELEJO', 'Sistemas e Infraestructura TI', 'Proyectores del salón no encienden', 'Estudiante', 'Cédula de ciudadanía (CC)', '1023456784', 'Valentina Morales', '3001234506', 'valentina.morales@uajs.edu.co', 'Alta', 'Sistemas e Infraestructura TI', NULL),
+    (10, 'Reclamo',    '2026-09-06', 'Abierta',    'El laboratorio de física no tiene elementos de seguridad disponibles.',  NULL, NULL,
+        'CARTAGENA', 'Facultad de Ciencias de la Ingeniería', 'Falta de elementos de seguridad en laboratorio', 'Estudiante', 'Cédula de ciudadanía (CC)', '1023456780', 'Isabella Ramírez', '3001234510', 'isabella.ramirez@uajs.edu.co', 'Alta', '', NULL),
+    (14, 'Sugerencia', '2026-09-08', 'Resuelta',   'Habilitar un punto de recarga adicional en la biblioteca.',                'Punto habilitado en piso 2.', '2026-09-10',
+        'SINCELEJO', 'Biblioteca', 'Punto de recarga adicional en biblioteca', 'Estudiante', 'Cédula de ciudadanía (CC)', '1023456776', 'Camila Herrera', '3001234514', 'camila.herrera@uajs.edu.co', 'Baja', 'Biblioteca', NULL),
+    (17, 'Petición',   '2026-09-10', 'Abierta',    'Solicitar segunda salida del laboratorio por actividades CAMPUS.',       NULL, NULL,
+        'SINCELEJO', 'Facultad de Ciencias de la Ingeniería', 'Segunda salida del laboratorio para actividades CAMPUS', 'Estudiante', 'Cédula de ciudadanía (CC)', '1023456773', 'Daniela Ortiz', '3001234517', 'daniela.ortiz@uajs.edu.co', 'Media', '', NULL);
 
-INSERT INTO info_academica (id_usuario, titulo, categoria, fecha, autor, contenido) VALUES
-    (3,  'Calendario Academico 2026-2', 'Calendario', '2026-09-01', 'Laura Gomez',    'Fechas oficiales del calendario academico del segundo semestre de 2026.'),
-    (5,  'Lineamientos de Proyectos',   'Normatividad','2026-08-20', 'Maria Fernanda Cardenas', 'Lineamientos metodologicos para el desarrollo de proyectos de grado.'),
-    (1,  'Protocolo de Uso de Espacios','Normatividad','2026-07-15', 'Natalia Rodriguez', 'Protocolo de reserva y uso de espacios academicos de la institucion.');
+INSERT INTO info_academica
+    (id_usuario, titulo, categoria, fecha, autor, contenido, programa, tipo_vigencia, vigencia, destacado)
+VALUES
+    (3,  'Calendario Académico 2026-2', 'Calendario', '2026-09-01', 'Laura Gómez',    'Fechas oficiales del calendario académico del segundo semestre de 2026.', 'Toda la comunidad', 'Hasta', '2026-12-20', 1),
+    (5,  'Lineamientos de Proyectos',   'Normatividad','2026-08-20', 'María Fernanda Cárdenas', 'Lineamientos metodológicos para el desarrollo de proyectos de grado.', 'Ingeniería de Software', 'Permanente', NULL, 0),
+    (1,  'Protocolo de Uso de Espacios','Normatividad','2026-07-15', 'Natalia Rodríguez', 'Protocolo de reserva y uso de espacios académicos de la institución.', 'Toda la comunidad', 'Permanente', NULL, 0);
 
 INSERT INTO configuracion (id_usuario, seccion, valor) VALUES
     (1, 'general',      '{"tema":"claro","notificaciones":true}'),
