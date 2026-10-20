@@ -29,7 +29,16 @@ export class ApiError extends Error {
     }
 }
 
-export async function apiFetch(path, { method = "GET", body, params } = {}) {
+/**
+ * @param {object} [opciones]
+ * @param {boolean} [opciones.silencioso=false] Si es true, un 401 NO dispara
+ *   el evento "uajs:sesion-expirada". Lo usa la validación de sesión, que
+ *   decide por su cuenta cuándo cerrar (y no debe cerrar por un fallo de red).
+ */
+export async function apiFetch(
+    path,
+    { method = "GET", body, params, silencioso = false } = {}
+) {
     if (!API) {
         throw new ApiError(
             "VITE_API_URL no está configurado. No se puede llamar al backend.",
@@ -82,7 +91,7 @@ export async function apiFetch(path, { method = "GET", body, params } = {}) {
         // El gateway devuelve 401 cuando el token falta o expiró: se avisa a
         // AuthContext para que cierre la sesión en lugar de dejar la UI con
         // datos viejos y errores por todos lados.
-        if (res.status === 401 && typeof window !== "undefined") {
+        if (res.status === 401 && !silencioso && typeof window !== "undefined") {
             window.dispatchEvent(
                 new CustomEvent("uajs:sesion-expirada", { detail: { url: path } })
             );
@@ -100,7 +109,7 @@ export const authApi = {
     login: (identificacion, password) =>
         apiFetch("/auth/login", { method: "POST", body: { identificacion, password } }),
     register: (payload) => apiFetch("/auth/register", { method: "POST", body: payload }),
-    me: () => apiFetch("/auth/me")
+    me: () => apiFetch("/auth/me", { silencioso: true })
 };
 
 // ==========================================

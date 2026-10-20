@@ -91,6 +91,15 @@ const INDEX_MAPPINGS = {
                 id_pqrs: { type: 'keyword' },
                 tipo: { type: 'keyword' },
                 descripcion: { type: 'text', analyzer: 'spanish_analyzer' },
+                // Campos de radicación añadidos al esquema.
+                asunto: { type: 'text', analyzer: 'spanish_analyzer' },
+                area: { type: 'text', analyzer: 'spanish_analyzer' },
+                nombre: { type: 'text', analyzer: 'spanish_analyzer' },
+                identificacion: { type: 'keyword' },
+                prioridad: { type: 'keyword' },
+                sede: { type: 'keyword' },
+                tipo_perfil: { type: 'keyword' },
+                asignado_a: { type: 'text', analyzer: 'spanish_analyzer' },
                 estado: { type: 'keyword' },
                 fecha: { type: 'date' }
             }
@@ -104,6 +113,11 @@ const INDEX_MAPPINGS = {
                 categoria: { type: 'keyword' },
                 contenido: { type: 'text', analyzer: 'spanish_analyzer' },
                 autor: { type: 'text', analyzer: 'spanish_analyzer' },
+                // Campos añadidos al esquema.
+                programa: { type: 'text', analyzer: 'spanish_analyzer' },
+                tipo_vigencia: { type: 'keyword' },
+                estado: { type: 'keyword' },
+                destacado: { type: 'boolean' },
                 fecha: { type: 'date' }
             }
         }

@@ -5,6 +5,7 @@ import Input from "../../components/Input/Input";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import useAuth from "../../context/useAuth";
 import useColeccion from "../../hooks/useColeccion";
+import useSugerencias from "../../hooks/useSugerencias";
 import {
     CLAVE_RECURSO,
     TIPOS_RECURSO,
@@ -144,13 +145,18 @@ function Recursos() {
         });
     }, [busqueda, categoria, categoriaRecurso, edificio, estado, items]);
 
-    const sugerencias = [
-        ...new Set(
-            items
-                .flatMap((recurso) => [recurso.nombre, recurso.tipo, recurso.ubicacion])
-                .filter(Boolean)
-        )
-    ];
+    // Respaldo local: se usa si Elasticsearch no responde.
+    const sugerenciasLocales = useMemo(
+        () => [
+            ...new Set(
+                items
+                    .flatMap((recurso) => [recurso.nombre, recurso.tipo, recurso.ubicacion])
+                    .filter(Boolean)
+            )
+        ],
+        [items]
+    );
+    const sugerencias = useSugerencias(query, "RECURSOS", sugerenciasLocales);
 
     const abrirNuevoRecurso = () => {
         setEditandoId(null);
@@ -358,6 +364,7 @@ function Recursos() {
                             onChange={(e) => setQuery(e.target.value)}
                             onSearch={() => setBusqueda(query)}
                             suggestions={sugerencias}
+                            serverSide
                         />
                     </div>
 

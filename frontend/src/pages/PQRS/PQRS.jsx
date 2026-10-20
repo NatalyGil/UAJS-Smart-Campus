@@ -9,6 +9,7 @@ import StatusBadge from "../../components/StatusBadge/StatusBadge";
 import useAuth from "../../context/useAuth";
 import { useToast } from "../../context/ToastContext";
 import useColeccion from "../../hooks/useColeccion";
+import useSugerencias from "../../hooks/useSugerencias";
 import {
     TIPOS_PQRS,
     ESTADOS_PQRS_ABIERTOS,
@@ -141,7 +142,8 @@ function PQRS() {
         (item) => ESTADOS_PQRS_ABIERTOS.includes(item.estado)
     ).length;
 
-    const sugerencias = useMemo(() => {
+    // Respaldo local: se usa si Elasticsearch no responde.
+    const sugerenciasLocales = useMemo(() => {
         const set = new Set();
         visibles.forEach((item) => {
             [item.codigo, item.tipo, item.estado, item.solicitante, item.asignadoA]
@@ -150,6 +152,7 @@ function PQRS() {
         });
         return [...set];
     }, [visibles]);
+    const sugerencias = useSugerencias(query, "PQRS", sugerenciasLocales);
 
     const mostrarAviso = (texto, esError = false) => {
         if (esError) {
@@ -445,6 +448,7 @@ function PQRS() {
                             onChange={(e) => setQuery(e.target.value)}
                             onSearch={() => setBusqueda(query)}
                             suggestions={sugerencias}
+                            serverSide
                         />
                     </div>
 

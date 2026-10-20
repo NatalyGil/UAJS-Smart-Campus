@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Icon from "../../components/Icon/Icon";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import useAuth from "../../context/useAuth";
 import { useToast } from "../../context/ToastContext";
 import useColeccion from "../../hooks/useColeccion";
+import useSugerencias from "../../hooks/useSugerencias";
 import {
     CLAVE_EVENTOS,
     CATEGORIAS_EVENTO,
@@ -131,13 +132,18 @@ function Eventos() {
     });
 
 
-    const sugerencias = [
-        ...new Set(
-            items
-                .flatMap((e) => [e.nombre, e.ubicacion, e.tipo])
-                .filter(Boolean)
-        )
-    ];
+    // Respaldo local: se usa si Elasticsearch no responde.
+    const sugerenciasLocales = useMemo(
+        () => [
+            ...new Set(
+                items
+                    .flatMap((e) => [e.nombre, e.ubicacion, e.tipo])
+                    .filter(Boolean)
+            )
+        ],
+        [items]
+    );
+    const sugerencias = useSugerencias(query, "EVENTOS", sugerenciasLocales);
 
     const mostrarAviso = (mensaje) => {
         setAviso(mensaje);
@@ -373,6 +379,7 @@ function Eventos() {
                             onChange={(e) => setQuery(e.target.value)}
                             onSearch={() => setBusqueda(query)}
                             suggestions={sugerencias}
+                            serverSide
                         />
                     </div>
 

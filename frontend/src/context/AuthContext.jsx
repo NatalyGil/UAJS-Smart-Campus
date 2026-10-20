@@ -101,6 +101,68 @@ function AuthProvider({ children }) {
             window.removeEventListener("uajs:sesion-expirada", onSesionExpirada);
     }, []);
 
+    // Validación de sesión al recargar.
+    //
+    // El JWT dura 24h pero el token se guarda en localStorage: si el usuario
+    // fue desactivado, cambió su rol o el token expiró, la UI lo descubriría
+    // recién al fallar otra llamada. Aquí se consulta /auth/me UNA vez al
+    // montar para refrescar el perfil y detectar tokens inválidos.
+    //
+    // Decisiones para no expulsar al usuario por un falso positivo:
+    //   - authApi.me usa apiFetch "silencioso": un 401 aquí NO dispara el
+    //     evento global de sesión expirada (lo maneja esta misma función).
+    //   - Solo se cierra con 401/403 reales (token inválido/expirado) o si el
+    //     usuario quedó inactivo en la BD.
+    //   - Un error de red (status 0), un timeout o un 5xx NO cierran sesión:
+    //     se conserva la sesión y la app sigue funcionando offline, que es
+    //     justo el diseño del store.
+    useEffect(() => {
+        const sesionGuardada = getSession();
+        if (!sesionGuardada?.token) return undefined;
+
+        let vigente = true;
+
+        authApi
+            .me()
+            .then((data) => {
+                if (!vigente || !data) return;
+
+                if (String(data.estado || "").toLowerCase() === "inactivo") {
+                    logout();
+                    return;
+                }
+
+                setUser((prev) => {
+                    if (!prev) return prev;
+                    const refrescado = {
+                        ...mapearUsuarioSesion({ ...prev, ...data }),
+                        // /auth/me no devuelve token: se conserva el vigente.
+                        token: prev.token
+                    };
+                    try {
+                        localStorage.setItem(SESSION_KEY, JSON.stringify(refrescado));
+                    } catch {
+                        // sin localStorage la sesión sigue en memoria
+                    }
+                    return refrescado;
+                });
+            })
+            .catch((error) => {
+                if (!vigente) return;
+                // Solo un 401/403 confirma que el token ya no sirve.
+                if (error?.status === 401 || error?.status === 403) {
+                    logout();
+                }
+                // Cualquier otro fallo (red, 5xx, timeout) se ignora: la
+                // sesión sigue siendo válida desde el punto de vista local.
+            });
+
+        return () => {
+            vigente = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     /**
      * Actualiza campos del usuario en sesión (en memoria y en localStorage).
      * Útil para reflejar la foto de perfil u otros cambios sin re-login.

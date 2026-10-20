@@ -7,6 +7,7 @@ import Pagination from "../../components/Pagination/Pagination";
 import useAuth from "../../context/useAuth";
 import usePagination from "../../hooks/usePagination";
 import useColeccion from "../../hooks/useColeccion";
+import useSugerencias from "../../hooks/useSugerencias";
 import { CLAVE_RECURSO, TIPOS_RECURSO, esEscenario, esReservable } from "../../utils/recursos";
 import {
     CLAVE_RESERVAS,
@@ -220,7 +221,9 @@ function Reservas() {
         setBusquedaAlerta(true);
     };
 
-    const sugerencias = useMemo(() => {
+    // Las sugerencias de Reservas son los recursos; se consultan al índice
+    // RECURSOS de Elasticsearch con respaldo local.
+    const sugerenciasLocales = useMemo(() => {
         return [
             ...new Set(
                 recursos
@@ -229,6 +232,7 @@ function Reservas() {
             )
         ];
     }, [recursos]);
+    const sugerencias = useSugerencias(query, "RECURSOS", sugerenciasLocales);
 
     const fechaReferencia = new Date(`${fecha || hoyStr}T00:00:00`);
     const inicioSemana = new Date(fechaReferencia);
@@ -299,6 +303,7 @@ function Reservas() {
                             }}
                             onSearch={buscarRecursos}
                             suggestions={sugerencias}
+                            serverSide
                             description=""
                         />
                     </div>

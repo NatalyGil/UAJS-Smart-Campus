@@ -5,8 +5,9 @@ const SEARCHABLE_FIELDS = {
     [INDICATORS.RECURSOS]: ['nombre_recurso', 'codigo', 'descripcion', 'ubicacion', 'tipo_recurso'],
     [INDICATORS.EVENTOS]: ['nombre_evento', 'descripcion', 'ubicacion', 'tipo_evento'],
     [INDICATORS.SOLICITUDES]: ['codigo', 'tipo', 'descripcion', 'solicitante', 'respuesta'],
-    [INDICATORS.PQRS]: ['id_pqrs', 'tipo', 'descripcion'],
-    [INDICATORS.INFO_ACADEMICA]: ['titulo', 'contenido', 'autor', 'categoria']
+    // Campos de radicación añadidos al esquema (asunto, area, nombre, ...).
+    [INDICATORS.PQRS]: ['id_pqrs', 'tipo', 'descripcion', 'asunto', 'area', 'nombre', 'prioridad', 'sede', 'estado'],
+    [INDICATORS.INFO_ACADEMICA]: ['titulo', 'contenido', 'autor', 'categoria', 'programa', 'estado']
 };
 
 async function searchAll(req, res, next) {
@@ -149,10 +150,10 @@ async function suggest(req, res, next) {
                 multi_match: {
                     query: q,
                     type: 'phrase_prefix',
-                    fields: ['nombre', 'apellido', 'nombre_completo', 'nombre_recurso', 'nombre_evento', 'titulo', 'solicitante']
+                    fields: ['nombre', 'apellido', 'nombre_completo', 'nombre_recurso', 'nombre_evento', 'titulo', 'solicitante', 'asunto', 'area', 'codigo']
                 }
             },
-            _source: ['nombre', 'apellido', 'nombre_completo', 'nombre_recurso', 'nombre_evento', 'titulo', 'solicitante', 'codigo', 'id_pqrs']
+            _source: ['nombre', 'apellido', 'nombre_completo', 'nombre_recurso', 'nombre_evento', 'titulo', 'solicitante', 'codigo', 'id_pqrs', 'asunto', 'area']
         });
 
         const suggestions = result.hits.hits.map(hit => {

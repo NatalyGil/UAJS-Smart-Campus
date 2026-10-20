@@ -5,6 +5,7 @@ import Icon from "../../components/Icon/Icon";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import Pagination from "../../components/Pagination/Pagination";
 import Modal from "../../components/Modal/Modal";
+import useSugerencias from "../../hooks/useSugerencias";
 import {
     ESTADOS_SOLICITUD,
     ETIQUETA_ESTADO,
@@ -128,7 +129,8 @@ function Solicitudes() {
     const { pagina, setPagina, totalPaginas, itemsPagina, desde, hasta } =
         usePagination(encontradas, 6);
 
-    const sugerencias = useMemo(() => {
+    // Respaldo local: se usa si Elasticsearch no responde.
+    const sugerenciasLocales = useMemo(() => {
         return [
             ...new Set(
                 items
@@ -142,6 +144,7 @@ function Solicitudes() {
             )
         ];
     }, [items]);
+    const sugerencias = useSugerencias(query, "SOLICITUDES", sugerenciasLocales);
 
     const fechasLegibles = (fecha) => {
         const partes = String(fecha).split("-");
@@ -540,6 +543,8 @@ function Solicitudes() {
                             onChange={(e) => setQuery(e.target.value)}
                             onSearch={() => setBusqueda(query)}
                             suggestions={sugerencias}
+                            serverSide
+                            description=""
                         />
                     </div>
 

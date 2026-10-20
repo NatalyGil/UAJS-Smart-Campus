@@ -4,6 +4,7 @@ import Icon from "../../components/Icon/Icon";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import useColeccion from "../../hooks/useColeccion";
+import useSugerencias from "../../hooks/useSugerencias";
 import {
     CATEGORIAS,
     CATEGORIA_ICONO,
@@ -95,11 +96,17 @@ function InfoAcademica() {
             ? visibles.length
             : visibles.filter((i) => i.categoria === cat).length;
 
-    const sugerencias = [
-        ...new Set(
-            items.flatMap((i) => [i.titulo, i.categoria, i.autor]).filter(Boolean)
-        )
-    ];
+    // Respaldo local: se usa si Elasticsearch no responde.
+    const sugerenciasLocales = useMemo(
+        () =>
+            [
+                ...new Set(
+                    items.flatMap((i) => [i.titulo, i.categoria, i.autor]).filter(Boolean)
+                )
+            ],
+        [items]
+    );
+    const sugerencias = useSugerencias(query, "INFO_ACADEMICA", sugerenciasLocales);
 
     // ── Formulario ────────────────────────────────────────────
     const handleChange = (e) => {
@@ -274,6 +281,7 @@ function InfoAcademica() {
                             onChange={(e) => setQuery(e.target.value)}
                             onSearch={() => setBusqueda(query)}
                             suggestions={sugerencias}
+                            serverSide
                         />
                     </div>
 

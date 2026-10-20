@@ -10,6 +10,7 @@ import { getUserInitials } from "../../utils/avatar";
 import useSearch from "../../hooks/useSearch";
 import usePagination from "../../hooks/usePagination";
 import useColeccion from "../../hooks/useColeccion";
+import useSugerencias from "../../hooks/useSugerencias";
 import "./Usuarios.css";
 
 const ROL_ICONO = {
@@ -111,13 +112,15 @@ function UsuariosAdmin() {
         (campo) => !String(form[campo] ?? "").trim()
     );
 
-    const sugerencias = useMemo(() => [
+    // Respaldo local: se usa si Elasticsearch no responde.
+    const sugerenciasLocales = useMemo(() => [
         ...new Set(
             items
                 .flatMap((i) => [i.cedula, i.usuario, i.nombre, i.correo, i.rol, i.programa])
                 .filter(Boolean)
         )
     ], [items]);
+    const sugerencias = useSugerencias(query, "USUARIOS", sugerenciasLocales);
 
     const mostrarAviso = useCallback((mensaje) => {
         setAviso(mensaje);
@@ -474,6 +477,7 @@ function UsuariosAdmin() {
                             onChange={(e) => setQuery(e.target.value)}
                             onSearch={() => setBusqueda(query)}
                             suggestions={sugerencias}
+                            serverSide
                         />
                     </div>
 

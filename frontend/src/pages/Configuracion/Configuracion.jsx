@@ -1,10 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useAuth from "../../context/useAuth";
 import { useTheme } from "../../context/ThemeContext";
 import useFontSize from "../../hooks/useFontSize";
 import useColeccion from "../../hooks/useColeccion";
 import Icon from "../../components/Icon/Icon";
-import { configurationApi, usersApi } from "../../utils/api";
+import { usersApi } from "../../utils/api";
+import {
+    CLAVE_CONFIGURACION,
+    configuracionDeUsuario,
+    guardarSeccion,
+    eliminarSeccion
+} from "../../utils/configuration";
 import {
     getPhotoByUserId,
     savePhotoByUserId,
@@ -13,8 +19,6 @@ import {
 import "./Configuracion.css";
 
 const STORAGE_KEY = "uajs_config";
-
-export const CLAVE_CONFIGURACION = "configuracion";
 
 // La tabla `configuracion` tiene una fila por (id_usuario, seccion) y guarda
 // `valor` como JSON; el configuration-service ya devuelve el valor parseado.
@@ -158,7 +162,15 @@ function Configuracion() {
     const { user, logout, updateUser } = useAuth();
     const { tema, setTema } = useTheme();
     const { levels, level, setLevel } = useFontSize();
-    const { items: remotas, recargar: recargarConfig } = useColeccion(CLAVE_CONFIGURACION);
+    const { items: todasLasFilas, recargar: recargarConfig } = useColeccion(CLAVE_CONFIGURACION);
+    // El listado del servicio puede traer filas de otros usuarios: solo se
+    // usan las del usuario en sesión.
+    const remotas = useMemo(
+        () => configuracionDeUsuario(user?.id),
+        // todasLasFilas entra como dependencia para recalcular al refrescar.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [todasLasFilas, user?.id]
+    );
 
     const [errorConfig, setErrorConfig] = useState("");
 
@@ -240,7 +252,6 @@ function Configuracion() {
     // Cada sección se guarda como una fila de `configuracion`
     // (UNIQUE id_usuario + seccion) con el valor en JSON.
     const configRef = useRef(config);
-    const filasRef = useRef(remotas);
     const idUsuarioRef = useRef(user?.id);
     const pendientesRef = useRef(new Set());
     const timerRef = useRef(null);
@@ -250,7 +261,6 @@ function Configuracion() {
     // valor desincronizado si React descarta el render.
     useEffect(() => {
         configRef.current = config;
-        filasRef.current = remotas;
         idUsuarioRef.current = user?.id;
     });
 
@@ -275,19 +285,9 @@ function Configuracion() {
             for (const nombre of pendientes) {
                 const valor = valorParaBackend(nombre, configRef.current?.[nombre]);
                 if (valor === undefined) continue;
-                const existente = filasRef.current.find(
-                    (fila) => fila.seccion === nombre
-                );
-                const payload = {
-                    id_usuario: idUsuario,
-                    seccion: nombre,
-                    valor
-                };
-                if (existente) {
-                    await configurationApi.update(existente.id, payload);
-                } else {
-                    await configurationApi.create(payload);
-                }
+                // guardarSeccion resuelve si hay que crear o actualizar la fila
+                // (id_usuario, seccion) usando el id_config real.
+                await guardarSeccion(idUsuario, nombre, valor);
             }
             setErrorConfig("");
             await recargarConfig();
@@ -517,9 +517,24 @@ function Configuracion() {
         }
     };
 
-    const solicitarDesactivacion = () => {
+    const solicitarDesactivacion = async () => {
         if (confirmando === "desactivar") {
-            // Aquí iría la llamada a la API de desactivación
+            // Acción irreversible confirmada: se elimina la configuración
+            // guardada del usuario en el servidor (DELETE /configuration/:id).
+            try {
+                const secciones = configuracionDeUsuario(user?.id).map(
+                    (fila) => fila.seccion
+                );
+                for (const nombre of secciones) {
+                    await eliminarSeccion(user?.id, nombre);
+                }
+                setErrorConfig("");
+            } catch (error) {
+                setErrorConfig(
+                    error.message ||
+                        "No se pudo eliminar la configuración en el servidor."
+                );
+            }
             marcarGuardado();
             setConfirmando(null);
         } else {
