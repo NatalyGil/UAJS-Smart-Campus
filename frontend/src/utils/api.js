@@ -102,6 +102,27 @@ export async function apiFetch(
     return json.data !== undefined ? json.data : json;
 }
 
+// ============================================================
+// APIs POR SERVICIO
+//
+// Nota sobre los métodos que NO tienen consumidor hoy:
+//
+//   - `get(id)` de cada servicio (users, requests, events, notifications,
+//     feedback, resources, reservations, academic-info, configuration).
+//   - `requestsApi.update` y `requestsApi.remove`.
+//   - `searchApi.byIndex`, `searchApi.suggest` e `searchApi.indices`.
+//
+// No son deuda olvidada: son superficie de API a propósito. El front es
+// "offline-first" — cada página carga la lista completa con useColeccion y
+// resuelve los registros individuales en memoria (p. ej. obtenerXPorId hace
+// find sobre la caché). Por eso ninguna vista necesita pedir un id suelto.
+//
+// Se mantienen envueltos aquí porque:
+//   1. ya existen y responden en el backend (verificado),
+//   2. documentan el contrato real de cada microservicio,
+//   3. evitan que la próxima vista de detalle tenga que escribir el fetch a mano.
+// ============================================================
+
 // ==========================================
 // AUTH
 // ==========================================

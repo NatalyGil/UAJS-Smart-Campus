@@ -121,6 +121,25 @@ const INDEX_MAPPINGS = {
                 fecha: { type: 'date' }
             }
         }
+    },
+    [INDICATORS.RESERVAS]: {
+        mappings: {
+            properties: {
+                id_reserva: { type: 'integer' },
+                id_usuario: { type: 'integer' },
+                id_recurso: { type: 'integer' },
+                // Se indexan los nombres resueltos (no solo los ids), que es
+                // lo que un usuario escribe al buscar: "laboratorio de redes".
+                recurso: { type: 'text', analyzer: 'spanish_analyzer' },
+                tipo_recurso: { type: 'keyword' },
+                ubicacion: { type: 'text', analyzer: 'spanish_analyzer' },
+                usuario: { type: 'text', analyzer: 'spanish_analyzer' },
+                motivo: { type: 'text', analyzer: 'spanish_analyzer' },
+                observaciones: { type: 'text', analyzer: 'spanish_analyzer' },
+                estado: { type: 'keyword' },
+                fecha: { type: 'date' }
+            }
+        }
     }
 };
 
@@ -217,6 +236,31 @@ async function indexInfoAcademica() {
     console.log(`${rows.length} publicaciones académicas indexadas`);
 }
 
+async function indexReservas() {
+    // Se resuelven los nombres (recurso, usuario) para que la búsqueda
+    // encuentre la reserva por lo que el usuario escribe, no por ids.
+    const [rows] = await pool.query(`
+        SELECT r.id_reserva, r.id_usuario, r.id_recurso,
+               r.fecha_reserva, r.hora_inicio, r.hora_fin,
+               r.motivo, r.observaciones, r.estado,
+               rec.nombre_recurso AS recurso,
+               rec.tipo_recurso,
+               rec.ubicacion,
+               CONCAT(u.nombre, ' ', u.apellido) AS usuario
+        FROM reservas r
+        LEFT JOIN recursos rec ON r.id_recurso = rec.id_recurso
+        LEFT JOIN usuarios u ON r.id_usuario = u.id_usuario
+    `);
+    const operations = rows.flatMap(doc => [
+        { index: { _index: INDICATORS.RESERVAS, _id: doc.id_reserva.toString() } },
+        { ...doc, fecha: doc.fecha_reserva }
+    ]);
+    if (operations.length > 0) {
+        await client.bulk({ refresh: true, operations });
+    }
+    console.log(`${rows.length} reservas indexadas`);
+}
+
 // Índice de Elasticsearch -> función que lo rellena desde MySQL.
 const INDEXADORES = {
     [INDICATORS.USUARIOS]: indexUsuarios,
@@ -224,7 +268,8 @@ const INDEXADORES = {
     [INDICATORS.EVENTOS]: indexEventos,
     [INDICATORS.SOLICITUDES]: indexSolicitudes,
     [INDICATORS.PQRS]: indexPQRS,
-    [INDICATORS.INFO_ACADEMICA]: indexInfoAcademica
+    [INDICATORS.INFO_ACADEMICA]: indexInfoAcademica,
+    [INDICATORS.RESERVAS]: indexReservas
 };
 
 /**
@@ -265,6 +310,7 @@ async function run() {
         await indexSolicitudes();
         await indexPQRS();
         await indexInfoAcademica();
+        await indexReservas();
         console.log('Indexación completada exitosamente');
     } catch (error) {
         console.error('Error en indexación:', error);
@@ -287,5 +333,6 @@ module.exports = {
     indexEventos,
     indexSolicitudes,
     indexPQRS,
-    indexInfoAcademica
+    indexInfoAcademica,
+    indexReservas
 };

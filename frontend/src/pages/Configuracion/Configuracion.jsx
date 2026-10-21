@@ -8,6 +8,7 @@ import { usersApi } from "../../utils/api";
 import {
     CLAVE_CONFIGURACION,
     configuracionDeUsuario,
+    cargarSeccion,
     guardarSeccion,
     eliminarSeccion
 } from "../../utils/configuration";
@@ -163,8 +164,8 @@ function Configuracion() {
     const { tema, setTema } = useTheme();
     const { levels, level, setLevel } = useFontSize();
     const { items: todasLasFilas, recargar: recargarConfig } = useColeccion(CLAVE_CONFIGURACION);
-    // El listado del servicio puede traer filas de otros usuarios: solo se
-    // usan las del usuario en sesión.
+    // La colección pide al servicio solo las filas del usuario en sesión
+    // (list(id_usuario)); el filtro por id se mantiene como red de seguridad.
     const remotas = useMemo(
         () => configuracionDeUsuario(user?.id),
         // todasLasFilas entra como dependencia para recalcular al refrescar.
@@ -288,6 +289,11 @@ function Configuracion() {
                 // guardarSeccion resuelve si hay que crear o actualizar la fila
                 // (id_usuario, seccion) usando el id_config real.
                 await guardarSeccion(idUsuario, nombre, valor);
+
+                // Confirmación puntual: se relee SOLO la sección guardada
+                // (getByUserAndSection) para verificar que quedó con el valor
+                // enviado, sin volver a traer toda la lista.
+                await cargarSeccion(idUsuario, nombre);
             }
             setErrorConfig("");
             await recargarConfig();

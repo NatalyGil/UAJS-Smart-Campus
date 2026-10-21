@@ -50,7 +50,8 @@ const PERMISO_POR_INDICE = {
     [INDICATORS.EVENTOS]: 'eventos',
     [INDICATORS.SOLICITUDES]: 'solicitudes',
     [INDICATORS.PQRS]: 'pqrs',
-    [INDICATORS.INFO_ACADEMICA]: 'info_academica'
+    [INDICATORS.INFO_ACADEMICA]: 'info_academica',
+    [INDICATORS.RESERVAS]: 'reservas'
 };
 
 /**

@@ -14,14 +14,15 @@
 
 // Prefijo de la API del gateway -> índice de Elasticsearch que hay que
 // reindexar tras una escritura. Los prefijos que no aparecen aquí no se
-// indexan (notificaciones, configuración, reservas, auth).
+// indexan (notificaciones, configuración, auth).
 const INDICE_POR_PREFIJO = {
     '/api/users': 'uajs_usuarios',
     '/api/resources': 'uajs_recursos',
     '/api/events': 'uajs_eventos',
     '/api/requests': 'uajs_solicitudes',
     '/api/feedback': 'uajs_pqrs',
-    '/api/academic-info': 'uajs_info_academica'
+    '/api/academic-info': 'uajs_info_academica',
+    '/api/reservations': 'uajs_reservas'
 };
 
 // Métodos que modifican datos.

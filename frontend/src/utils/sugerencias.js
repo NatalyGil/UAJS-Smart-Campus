@@ -16,7 +16,8 @@ export const CAMPOS_SUGERENCIA = {
     EVENTOS: ["nombre_evento", "tipo_evento", "ubicacion"],
     SOLICITUDES: ["codigo", "tipo", "solicitante"],
     PQRS: ["asunto", "area", "nombre", "tipo"],
-    INFO_ACADEMICA: ["titulo", "categoria", "autor", "programa"]
+    INFO_ACADEMICA: ["titulo", "categoria", "autor", "programa"],
+    RESERVAS: ["recurso", "motivo", "usuario", "tipo_recurso"]
 };
 
 /**
