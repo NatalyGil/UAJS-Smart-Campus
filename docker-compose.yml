@@ -111,6 +111,9 @@ services:
       DB_PASSWORD: ""
       DB_NAME: uajs_smart_campus
       PORT: 3000
+      # Destino del aviso de reindexado tras una escritura (ver
+      # src/middlewares/reindexado.js). Dentro de Docker es el nombre del contenedor.
+      SEARCH_SERVICE_URL: http://search-service:3011
 
     ports:
       - "3000:3000"

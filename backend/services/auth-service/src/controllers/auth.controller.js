@@ -74,14 +74,17 @@ async function login(req, res, next) {
 
 async function register(req, res, next) {
     try {
-        const { nombre, apellido, correo, usuario, password, telefono, id_rol, tipo_usuario } = req.body;
+        const {
+            nombre, apellido, correo, usuario, password, telefono,
+            id_rol, tipo_usuario, cedula, programa, cargo, campus
+        } = req.body;
         if (!nombre || !apellido || !correo || !usuario || !password) {
             return res.status(400).json({ error: 'Faltan campos requeridos' });
         }
 
         const [existente] = await pool.query(
-            'SELECT id_usuario FROM usuarios WHERE identificacion = ? OR correo = ?',
-            [usuario, correo]
+            'SELECT id_usuario FROM usuarios WHERE identificacion = ? OR usuario = ? OR correo = ?',
+            [usuario, usuario, correo]
         );
         if (existente.length) {
             return res.status(409).json({ error: 'El usuario o el correo ya están registrados' });
@@ -89,12 +92,34 @@ async function register(req, res, next) {
 
         const hash = await bcrypt.hash(password, SALT_ROUNDS);
 
+        // `identificacion` y `usuario` son NOT NULL: en el registro público se
+        // usa el mismo valor para ambos, igual que hace users-service.create.
         const [result] = await pool.query(
-            'INSERT INTO usuarios (nombre, apellido, correo, identificacion, contraseña, telefono, id_rol, tipo_usuario, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [nombre, apellido, correo, usuario, hash, telefono || '', id_rol || 2, tipo_usuario || 'Estudiante', 'Activo']
+            `INSERT INTO usuarios
+                (identificacion, usuario, cedula, contraseña, nombre, apellido, correo,
+                 telefono, id_rol, tipo_usuario, programa, cargo, campus, estado)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
+            [
+                usuario,
+                usuario,
+                cedula || null,
+                hash,
+                nombre,
+                apellido,
+                correo,
+                telefono || '',
+                id_rol || 2,
+                tipo_usuario || 'Estudiante',
+                programa || '',
+                cargo || '',
+                campus || 'Campus principal'
+            ]
         );
 
-        const [newUser] = await pool.query('SELECT id_usuario, nombre, apellido, correo, identificacion, id_rol, tipo_usuario, estado FROM usuarios WHERE id_usuario = ?', [result.insertId]);
+        const [newUser] = await pool.query(
+            'SELECT id_usuario, identificacion, usuario, nombre, apellido, correo, id_rol, tipo_usuario, programa, cargo, estado FROM usuarios WHERE id_usuario = ?',
+            [result.insertId]
+        );
         res.status(201).json({ data: newUser[0] });
     } catch (error) {
         next(error);

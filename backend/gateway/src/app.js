@@ -7,6 +7,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
 const routes = require('./config/routes');
 const authMiddleware = require('./middlewares/auth');
+const reindexadoMiddleware = require('./middlewares/reindexado');
 
 const app = express();
 
@@ -54,6 +55,11 @@ app.use('/api/auth/login', (req, res, next) =>
 
 // Todo /api/* pasa por verificación de JWT salvo login y register.
 app.use('/api', authMiddleware);
+
+// Tras una escritura exitosa en una tabla indexada, avisa al search-service
+// para que reindexe ese índice. Un solo punto de cambio para los seis
+// servicios, y no bloquea la respuesta (ver middlewares/reindexado.js).
+app.use('/api', reindexadoMiddleware);
 
 app.use('/api/auth', proxyFor('auth', '/api/auth'));
 app.use('/api/users', proxyFor('users', '/api/users'));
