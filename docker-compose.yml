@@ -76,6 +76,9 @@ services:
       ELASTICSEARCH_NODE: http://elasticsearch:9200
       SEARCH_SERVICE_PORT: 3011
       PORT: 3011
+      # Reindexado automático. 0/vacío = desactivado (por defecto).
+      # P. ej. 300000 lo reindexa cada 5 minutos.
+      SEARCH_REINDEX_INTERVAL_MS: "${SEARCH_REINDEX_INTERVAL_MS:-0}"
 
     ports:
       - "3011:3011"

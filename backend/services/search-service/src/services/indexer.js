@@ -217,6 +217,42 @@ async function indexInfoAcademica() {
     console.log(`${rows.length} publicaciones académicas indexadas`);
 }
 
+// Índice de Elasticsearch -> función que lo rellena desde MySQL.
+const INDEXADORES = {
+    [INDICATORS.USUARIOS]: indexUsuarios,
+    [INDICATORS.RECURSOS]: indexRecursos,
+    [INDICATORS.EVENTOS]: indexEventos,
+    [INDICATORS.SOLICITUDES]: indexSolicitudes,
+    [INDICATORS.PQRS]: indexPQRS,
+    [INDICATORS.INFO_ACADEMICA]: indexInfoAcademica
+};
+
+/**
+ * Reindexa (recreando el índice) uno o varios índices sin cerrar el pool ni
+ * el cliente de Elasticsearch. Pensado para llamarse desde el propio servicio
+ * en caliente, no como script de consola.
+ *
+ * @param {string[]} [indices] Nombres exactos de índice. Sin argumento: todos.
+ * @returns {Promise<{indices:string[], errores:Array}>}
+ */
+async function reindexar(indices) {
+    const objetivos = (indices && indices.length
+        ? indices
+        : Object.values(INDICATORS)
+    ).filter((nombre) => INDEXADORES[nombre]);
+
+    const errores = [];
+    for (const nombre of objetivos) {
+        try {
+            await createIndex(nombre);
+            await INDEXADORES[nombre]();
+        } catch (error) {
+            errores.push({ index: nombre, error: error.message });
+        }
+    }
+    return { indices: objetivos, errores };
+}
+
 async function run() {
     console.log('Iniciando indexación...');
     try {
@@ -245,6 +281,7 @@ if (require.main === module) {
 
 module.exports = {
     run,
+    reindexar,
     indexUsuarios,
     indexRecursos,
     indexEventos,

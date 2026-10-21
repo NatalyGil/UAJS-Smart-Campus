@@ -43,7 +43,7 @@ async function login(req, res, next) {
         }
 
         const [rows] = await pool.query(
-            'SELECT id_usuario, nombre, apellido, correo, id_rol, tipo_usuario, contraseña, foto_perfil, estado FROM usuarios WHERE identificacion = ? AND estado = ?',
+            'SELECT id_usuario, nombre, apellido, correo, id_rol, tipo_usuario, programa, cargo, contraseña, foto_perfil, estado FROM usuarios WHERE identificacion = ? AND estado = ?',
             [identificacion, 'Activo']
         );
 
@@ -105,7 +105,7 @@ async function me(req, res, next) {
     try {
         const user = req.user;
         const [rows] = await pool.query(
-            'SELECT id_usuario, nombre, apellido, correo, id_rol, tipo_usuario, foto_perfil, estado FROM usuarios WHERE id_usuario = ?',
+            'SELECT id_usuario, nombre, apellido, correo, id_rol, tipo_usuario, programa, cargo, foto_perfil, estado FROM usuarios WHERE id_usuario = ?',
             [user.id]
         );
         if (!rows.length) {

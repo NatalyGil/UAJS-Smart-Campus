@@ -112,7 +112,8 @@ export function mapearUsuarioSesion(data) {
         correo: texto(data.correo),
         rol: nombreDeRol(data.rol ?? data.id_rol, data.tipo_usuario),
         id_rol: Number(data.rol ?? data.id_rol) || 2,
-        programa: "No especificado",
+        programa: texto(data.programa, "No especificado"),
+        cargo: texto(data.cargo),
         foto: texto(data.foto_perfil || data.foto, ""),
         token: data.token
     };
