@@ -1,30 +1,69 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { obtenerUsuarios } from "../../utils/users";
+import { Link, useSearchParams } from "react-router-dom";
+import { authApi } from "../../utils/api";
 import BrandLogo from "../../components/BrandLogo/BrandLogo";
 import "../Login/Login.css";
 
+// ============================================================
+// RECUPERAR ACCESO
+//
+// Dos modos en la misma ruta `/recuperar`:
+//   - sin ?token  -> el usuario pide el enlace (se envía por correo).
+//   - con ?token  -> viene del correo: define la nueva contraseña.
+//
+// Todo pasa por el backend (`/auth/recuperar` y `/auth/restablecer`). Si el
+// servicio de correo no está configurado, el backend responde 503 y aquí se
+// muestra el mensaje tal cual: no se finge que se envió nada.
+// ============================================================
+
 function Recuperar() {
-    const [cedula, setCedula] = useState("");
+    const [params] = useSearchParams();
+    const token = params.get("token") || "";
+
+    const [identificacion, setIdentificacion] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmar, setConfirmar] = useState("");
+
     const [mensaje, setMensaje] = useState("");
     const [error, setError] = useState("");
+    const [enviando, setEnviando] = useState(false);
 
-    const handleSubmit = (e) => {
+    // Modo 1: solicitar el enlace de recuperación.
+    const solicitar = async (e) => {
         e.preventDefault();
+        setError("");
+        setMensaje("");
+        setEnviando(true);
+        try {
+            const data = await authApi.forgot({ identificacion });
+            setMensaje(data?.mensaje || "Revisa tu correo institucional.");
+        } catch (err) {
+            setError(err?.message || "No se pudo procesar la solicitud.");
+        } finally {
+            setEnviando(false);
+        }
+    };
 
-        const usuarios = obtenerUsuarios();
-        const usuario = usuarios.find(
-            (item) => String(item.cedula) === String(cedula).trim()
-        );
-
-        if (!usuario) {
-            setError("No encontramos una cuenta con esa cédula.");
-            setMensaje("");
+    // Modo 2: definir la nueva contraseña con el token del correo.
+    const restablecer = async (e) => {
+        e.preventDefault();
+        setError("");
+        setMensaje("");
+        if (password !== confirmar) {
+            setError("Las contraseñas no coinciden.");
             return;
         }
-
-        setError("");
-        setMensaje(`Se enviaron las instrucciones de recuperación a ${usuario.correo || "tu correo institucional"}. Revisa tu bandeja de entrada.`);
+        setEnviando(true);
+        try {
+            const data = await authApi.reset(token, password);
+            setMensaje(data?.mensaje || "Contraseña actualizada. Ya puedes iniciar sesión.");
+            setPassword("");
+            setConfirmar("");
+        } catch (err) {
+            setError(err?.message || "El enlace no es válido o ya expiró.");
+        } finally {
+            setEnviando(false);
+        }
     };
 
     return (
@@ -43,12 +82,16 @@ function Recuperar() {
                     />
 
                     <h1 className="login__title">
-                        Recupera el<br />
-                        acceso a tu<br />
-                        cuenta
+                        {token ? (
+                            <>Crea tu<br />nueva<br />contraseña</>
+                        ) : (
+                            <>Recupera el<br />acceso a tu<br />cuenta</>
+                        )}
                     </h1>
                     <p className="login__desc">
-                        Te enviaremos las instrucciones para restablecer tu contraseña a tu correo institucional.
+                        {token
+                            ? "Elige una contraseña nueva para volver a entrar a tu cuenta."
+                            : "Te enviaremos un enlace para restablecer tu contraseña a tu correo institucional."}
                     </p>
                 </div>
             </aside>
@@ -56,8 +99,12 @@ function Recuperar() {
             <section className="login__panel">
                 <div className="login__card">
                     <div className="login__form-header">
-                        <h2>Recuperar acceso</h2>
-                        <p>Ingresa tu número de cédula para continuar</p>
+                        <h2>{token ? "Nueva contraseña" : "Recuperar acceso"}</h2>
+                        <p>
+                            {token
+                                ? "Ingresa y confirma tu nueva contraseña"
+                                : "Ingresa tu identificación, cédula o correo"}
+                        </p>
                     </div>
 
                     {error && (
@@ -81,25 +128,64 @@ function Recuperar() {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="login__form" autoComplete="off">
-                        <div className="login__field">
-                            <label htmlFor="recuperar-cedula">Cédula</label>
-                            <input
-                                type="text"
-                                id="recuperar-cedula"
-                                placeholder="Número de cédula"
-                                value={cedula}
-                                onChange={(e) => setCedula(e.target.value)}
-                                required
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                            />
-                        </div>
+                    {token ? (
+                        <form onSubmit={restablecer} className="login__form" autoComplete="off">
+                            <div className="login__field">
+                                <label htmlFor="nueva-password">Nueva contraseña</label>
+                                <input
+                                    type="password"
+                                    id="nueva-password"
+                                    placeholder="Mínimo 6 caracteres"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    minLength={6}
+                                    required
+                                />
+                            </div>
+                            <div className="login__field">
+                                <label htmlFor="confirmar-password">Confirmar contraseña</label>
+                                <input
+                                    type="password"
+                                    id="confirmar-password"
+                                    placeholder="Repite la contraseña"
+                                    value={confirmar}
+                                    onChange={(e) => setConfirmar(e.target.value)}
+                                    minLength={6}
+                                    required
+                                />
+                            </div>
 
-                        <button type="submit" className="login__submit" disabled={!cedula}>
-                            Enviar instrucciones
-                        </button>
-                    </form>
+                            <button
+                                type="submit"
+                                className="login__submit"
+                                disabled={!password || !confirmar || enviando}
+                            >
+                                {enviando ? "Guardando..." : "Guardar contraseña"}
+                            </button>
+                        </form>
+                    ) : (
+                        <form onSubmit={solicitar} className="login__form" autoComplete="off">
+                            <div className="login__field">
+                                <label htmlFor="recuperar-identificacion">Identificación, cédula o correo</label>
+                                <input
+                                    type="text"
+                                    id="recuperar-identificacion"
+                                    placeholder="Ej.: 1234567890 o tu correo institucional"
+                                    value={identificacion}
+                                    onChange={(e) => setIdentificacion(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="login__submit"
+                                disabled={!identificacion || enviando}
+                            >
+                                {enviando ? "Enviando..." : "Enviar instrucciones"}
+                            </button>
+                        </form>
+                    )}
 
                     <div className="login__back-link">
                         <Link to="/login">

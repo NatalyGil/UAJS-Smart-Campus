@@ -57,6 +57,9 @@ CREATE TABLE usuarios (
     campus          VARCHAR(80)  DEFAULT 'Campus principal',
      foto_perfil     LONGTEXT DEFAULT NULL,
     estado          VARCHAR(20)  NOT NULL DEFAULT 'Activo',
+    -- Recuperación de contraseña: hash SHA-256 del token y su expiración.
+    reset_token     VARCHAR(64)  DEFAULT NULL,
+    reset_expira    DATETIME     DEFAULT NULL,
     created_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_usuarios_rol FOREIGN KEY (id_rol) REFERENCES roles (id_rol),

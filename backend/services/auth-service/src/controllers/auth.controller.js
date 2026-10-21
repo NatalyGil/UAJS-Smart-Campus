@@ -1,10 +1,22 @@
+const crypto = require('crypto');
 const pool = require('../config/database');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { correoConfigurado, enviarRecuperacion } = require('../config/mailer');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '24h';
 const SALT_ROUNDS = 10;
+
+// El token del correo solo es válido 1 hora.
+const RESET_TTL_MS = 60 * 60 * 1000;
+// A dónde apunta el enlace del correo (front en desarrollo: Vite).
+const FRONT_URL = (process.env.FRONT_URL || 'http://localhost:5173').replace(/\/$/, '');
+
+/** SHA-256 del token: en la BD se guarda el hash, nunca el token en claro. */
+function hashToken(token) {
+    return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 if (!JWT_SECRET) {
     throw new Error(
@@ -126,6 +138,114 @@ async function register(req, res, next) {
     }
 }
 
+/**
+ * POST /auth/recuperar
+ * Recibe identificación, cédula o correo, y si la cuenta existe envía un
+ * correo con un enlace para restablecer la contraseña.
+ *
+ * Responde 200 siempre que el formato sea válido (aunque la cuenta no exista)
+ * para no revelar qué usuarios están registrados. Si NO hay SMTP configurado
+ * responde 503 y un mensaje honesto en lugar de fingir que envió el correo.
+ */
+async function recuperar(req, res, next) {
+    try {
+        const { identificacion, cedula, correo } = req.body;
+        const criterio =
+            (identificacion && String(identificacion).trim()) ||
+            (cedula && String(cedula).trim()) ||
+            (correo && String(correo).trim());
+
+        if (!criterio) {
+            return res.status(400).json({
+                error: 'Indica tu identificación, cédula o correo institucional'
+            });
+        }
+
+        if (!correoConfigurado()) {
+            return res.status(503).json({
+                error:
+                    'El servicio de correo no está configurado. Contacta al ' +
+                    'administrador del campus para restablecer tu contraseña.'
+            });
+        }
+
+        const [rows] = await pool.query(
+            `SELECT id_usuario, nombre, correo FROM usuarios
+             WHERE identificacion = ? OR cedula = ? OR correo = ? LIMIT 1`,
+            [criterio, criterio, criterio]
+        );
+
+        // Cuenta inexistente: misma respuesta genérica, sin enviar nada.
+        if (rows.length) {
+            const usuario = rows[0];
+            const token = crypto.randomBytes(32).toString('hex');
+            const expira = new Date(Date.now() + RESET_TTL_MS);
+
+            await pool.query(
+                'UPDATE usuarios SET reset_token = ?, reset_expira = ? WHERE id_usuario = ?',
+                [hashToken(token), expira, usuario.id_usuario]
+            );
+
+            const enlace = `${FRONT_URL}/recuperar?token=${token}`;
+            await enviarRecuperacion(usuario.correo, enlace);
+        }
+
+        res.json({
+            data: {
+                mensaje:
+                    'Si la cuenta existe, enviamos las instrucciones a tu ' +
+                    'correo institucional.'
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * POST /auth/restablecer
+ * Recibe el token del correo y la nueva contraseña; si es válido y no ha
+ * expirado, guarda la nueva contraseña (bcrypt) y limpia el token.
+ */
+async function restablecer(req, res, next) {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) {
+            return res.status(400).json({ error: 'Token y nueva contraseña son requeridos' });
+        }
+        if (String(password).length < 6) {
+            return res.status(400).json({
+                error: 'La contraseña debe tener al menos 6 caracteres'
+            });
+        }
+
+        const [rows] = await pool.query(
+            `SELECT id_usuario FROM usuarios
+             WHERE reset_token = ? AND reset_expira > NOW() LIMIT 1`,
+            [hashToken(String(token))]
+        );
+
+        // Token inválido o expirado: mensaje único para no dar pistas.
+        if (!rows.length) {
+            return res.status(400).json({
+                error: 'El enlace no es válido o ya expiró. Solicita uno nuevo.'
+            });
+        }
+
+        const hash = await bcrypt.hash(password, SALT_ROUNDS);
+        await pool.query(
+            `UPDATE usuarios
+                SET contraseña = ?, reset_token = NULL, reset_expira = NULL
+              WHERE id_usuario = ?`,
+            [hash, rows[0].id_usuario]
+        );
+
+        res.json({ data: { mensaje: 'Contraseña actualizada. Ya puedes iniciar sesión.' } });
+    } catch (error) {
+        next(error);
+    }
+}
+
 async function me(req, res, next) {
     try {
         const user = req.user;
@@ -142,4 +262,4 @@ async function me(req, res, next) {
     }
 }
 
-module.exports = { login, register, me };
+module.exports = { login, register, recuperar, restablecer, me };

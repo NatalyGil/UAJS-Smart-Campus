@@ -53,6 +53,22 @@ app.use('/api/auth/login', (req, res, next) =>
 	req.method === 'POST' ? loginLimiter(req, res, next) : next()
 );
 
+// El correo de recuperación también se limita (3/min por IP) para que nadie
+// use el endpoint como bomba de correos contra un buzón ajeno.
+const recuperarLimiter = rateLimit({
+	windowMs: 60 * 1000,
+	limit: 3,
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: {
+		error: 'Demasiadas solicitudes de recuperación. Vuelve a intentarlo en un minuto.'
+	}
+});
+
+app.use('/api/auth/recuperar', (req, res, next) =>
+	req.method === 'POST' ? recuperarLimiter(req, res, next) : next()
+);
+
 // Todo /api/* pasa por verificación de JWT salvo login y register.
 app.use('/api', authMiddleware);
 

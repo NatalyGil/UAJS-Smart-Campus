@@ -12,7 +12,9 @@ if (!JWT_SECRET) {
 // Rutas públicas: sin token. El resto exige un JWT válido.
 const RUTAS_PUBLICAS = [
     { metodo: 'POST', patron: /^\/api\/auth\/login$/ },
-    { metodo: 'POST', patron: /^\/api\/auth\/register$/ }
+    { metodo: 'POST', patron: /^\/api\/auth\/register$/ },
+    { metodo: 'POST', patron: /^\/api\/auth\/recuperar$/ },
+    { metodo: 'POST', patron: /^\/api\/auth\/restablecer$/ }
 ];
 
 function esPublica(req) {

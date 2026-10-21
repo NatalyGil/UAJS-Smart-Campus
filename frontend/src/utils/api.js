@@ -130,6 +130,13 @@ export const authApi = {
     login: (identificacion, password) =>
         apiFetch("/auth/login", { method: "POST", body: { identificacion, password } }),
     register: (payload) => apiFetch("/auth/register", { method: "POST", body: payload }),
+    // Recuperación de contraseña. `forgot` es silencioso: si el servicio de
+    // correo no está configurado (503) queremos mostrar el error, no disparar
+    // el cierre de sesión global.
+    forgot: (payload) =>
+        apiFetch("/auth/recuperar", { method: "POST", body: payload, silencioso: true }),
+    reset: (token, password) =>
+        apiFetch("/auth/restablecer", { method: "POST", body: { token, password }, silencioso: true }),
     me: () => apiFetch("/auth/me", { silencioso: true })
 };
 
