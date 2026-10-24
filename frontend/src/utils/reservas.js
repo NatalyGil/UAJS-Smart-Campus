@@ -214,7 +214,9 @@ export const RESERVAS_BASE = [
 crearColeccion({
     clave: CLAVE_RESERVAS,
     leer: () => reservationsApi.list(),
-    mapear: normalizarReserva,
+    // La API devuelve la fila de BD (id_reserva, nombre_recurso...); primero
+    // se traduce al modelo de la UI y después se normaliza.
+    mapear: (raw) => normalizarReserva(mapearReserva(raw)),
     semilla: RESERVAS_BASE,
     crear: async (modelo) => {
         const creada = await reservationsApi.create(payloadDe(modelo));

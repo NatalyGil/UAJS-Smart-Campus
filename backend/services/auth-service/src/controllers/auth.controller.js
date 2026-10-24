@@ -51,12 +51,29 @@ async function login(req, res, next) {
     try {
         const { identificacion, password } = req.body;
         if (!identificacion || !password) {
-            return res.status(400).json({ error: 'Identificación y contraseña son requeridos' });
+            return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
         }
 
+        const criterio = String(identificacion).trim();
+        // Igual que en recuperación: la cédula puede venir con puntos,
+        // espacios o guiones ("1.023.456.789").
+        const documento = criterio.replace(/[.\s-]/g, "");
+        const documentoBuscado = documento || criterio;
+
         const [rows] = await pool.query(
-            'SELECT id_usuario, nombre, apellido, correo, id_rol, tipo_usuario, programa, cargo, contraseña, foto_perfil, estado FROM usuarios WHERE identificacion = ? AND estado = ?',
-            [identificacion, 'Activo']
+            `SELECT id_usuario, identificacion, nombre, apellido, correo, id_rol,
+                    tipo_usuario, programa, cargo, contraseña, foto_perfil, estado
+             FROM usuarios
+             WHERE (
+                 identificacion = ?
+                 OR cedula = ?
+                 OR (
+                     cedula IS NOT NULL
+                     AND REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '') = ?
+                 )
+             ) AND estado = ?
+             LIMIT 1`,
+            [criterio, criterio, documentoBuscado, 'Activo']
         );
 
         const user = rows[0];
@@ -68,13 +85,13 @@ async function login(req, res, next) {
         }
 
         const token = jwt.sign(
-            { id: user.id_usuario, identificacion, rol: user.id_rol },
+            { id: user.id_usuario, identificacion: user.identificacion, rol: user.id_rol },
             JWT_SECRET,
             { expiresIn: JWT_EXPIRES }
         );
 
         const { contraseña, ...userSafe } = user;
-        userSafe.identificacion = identificacion;
+        userSafe.identificacion = user.identificacion;
         userSafe.rol = user.id_rol;
         userSafe.token = token;
 
@@ -140,8 +157,8 @@ async function register(req, res, next) {
 
 /**
  * POST /auth/recuperar
- * Recibe identificación, cédula o correo, y si la cuenta existe envía un
- * correo con un enlace para restablecer la contraseña.
+ * Recibe correo, número de cédula o identificación, y si la cuenta existe
+ * envía un correo con un enlace para restablecer la contraseña.
  *
  * Responde 200 siempre que el formato sea válido (aunque la cuenta no exista)
  * para no revelar qué usuarios están registrados. Si NO hay SMTP configurado
@@ -157,9 +174,15 @@ async function recuperar(req, res, next) {
 
         if (!criterio) {
             return res.status(400).json({
-                error: 'Indica tu identificación, cédula o correo institucional'
+                error: 'Indica tu correo o número de cédula'
             });
         }
+
+        // La cédula suele escribirse con puntos, espacios o guiones
+        // ("1.023.456.789"). Se compara también sin separadores para que
+        // funcione igual de escrita de cualquier forma.
+        const documento = criterio.replace(/[.\s-]/g, "");
+        const documentoBuscado = documento || criterio;
 
         if (!correoConfigurado()) {
             return res.status(503).json({
@@ -171,8 +194,15 @@ async function recuperar(req, res, next) {
 
         const [rows] = await pool.query(
             `SELECT id_usuario, nombre, correo FROM usuarios
-             WHERE identificacion = ? OR cedula = ? OR correo = ? LIMIT 1`,
-            [criterio, criterio, criterio]
+             WHERE identificacion = ?
+                OR correo = ?
+                OR cedula = ?
+                OR (
+                    cedula IS NOT NULL
+                    AND REPLACE(REPLACE(REPLACE(cedula, '.', ''), '-', ''), ' ', '') = ?
+                )
+             LIMIT 1`,
+            [criterio, criterio, criterio, documentoBuscado]
         );
 
         // Cuenta inexistente: misma respuesta genérica, sin enviar nada.
@@ -193,8 +223,8 @@ async function recuperar(req, res, next) {
         res.json({
             data: {
                 mensaje:
-                    'Si la cuenta existe, enviamos las instrucciones a tu ' +
-                    'correo institucional.'
+                    'Si los datos coinciden con una cuenta, enviamos el enlace ' +
+                    'al correo registrado en tu cuenta.'
             }
         });
     } catch (error) {

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import Icon from "../../components/Icon/Icon";
+import ImagenCategoria from "../../components/ImagenCategoria/ImagenCategoria";
 import Modal from "../../components/Modal/Modal";
 import Input from "../../components/Input/Input";
 import SearchBar from "../../components/SearchBar/SearchBar";
@@ -368,7 +369,7 @@ function Reservas() {
                         return (
                             <div className="reservas__resource-card" key={recurso.id}>
                                 <div className={`reservas__resource-image ${variante.clase}-bg`}>
-                                    <Icon name={variante.icono} size={40} />
+                                    <ImagenCategoria grupo="recurso" tipo={recurso.tipo} semilla={recurso.id} />
                                     <span className="reservas__available">DISPONIBLE</span>
                                 </div>
 

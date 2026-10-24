@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import useAuth from "../../context/useAuth";
 import Icon from "../../components/Icon/Icon";
+import ImagenCategoria from "../../components/ImagenCategoria/ImagenCategoria";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import ConfirmModal from "../../components/ConfirmModal/ConfirmModal";
 import useColeccion from "../../hooks/useColeccion";
@@ -327,8 +328,8 @@ function InfoAcademica() {
                                 ].filter(Boolean).join(" ")}
                                 key={item.id}
                             >
-                                <div className={`info-ac__item-icon info-ac__item-icon--${CATEGORIA_CLASE[item.categoria] || "blue"}`}>
-                                    <Icon name={CATEGORIA_ICONO[item.categoria] || "info"} size={20} />
+                                <div className="info-ac__item-media">
+                                    <ImagenCategoria grupo="info" tipo={item.categoria} semilla={item.id} />
                                 </div>
 
                                 <div className="info-ac__item-body">

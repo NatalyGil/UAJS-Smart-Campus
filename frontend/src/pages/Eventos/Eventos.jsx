@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../../components/Icon/Icon";
+import ImagenCategoria from "../../components/ImagenCategoria/ImagenCategoria";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import useAuth from "../../context/useAuth";
 import { useToast } from "../../context/ToastContext";
@@ -431,6 +432,10 @@ function Eventos() {
                 <div className="eventos__grid">
                     {encontrados.map((ev) => (
                         <article className="eventos__item" key={ev.id}>
+                            <div className="eventos__item-media">
+                                <ImagenCategoria grupo="evento" tipo={ev.tipo} semilla={ev.id} />
+                            </div>
+
                             <div className="eventos__item-top">
                                 <span
                                     className={`badge badge--${CATEGORIA_CLASE[ev.tipo] || "blue"}`}

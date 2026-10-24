@@ -36,7 +36,7 @@ function Recuperar() {
         setEnviando(true);
         try {
             const data = await authApi.forgot({ identificacion });
-            setMensaje(data?.mensaje || "Revisa tu correo institucional.");
+            setMensaje(data?.mensaje || "Revisa el correo registrado en tu cuenta.");
         } catch (err) {
             setError(err?.message || "No se pudo procesar la solicitud.");
         } finally {
@@ -91,7 +91,7 @@ function Recuperar() {
                     <p className="login__desc">
                         {token
                             ? "Elige una contraseña nueva para volver a entrar a tu cuenta."
-                            : "Te enviaremos un enlace para restablecer tu contraseña a tu correo institucional."}
+                            : "Te enviaremos un enlace para restablecer tu contraseña al correo registrado en tu cuenta."}
                     </p>
                 </div>
             </aside>
@@ -103,7 +103,7 @@ function Recuperar() {
                         <p>
                             {token
                                 ? "Ingresa y confirma tu nueva contraseña"
-                                : "Ingresa tu identificación, cédula o correo"}
+                                : "Ingresa tu correo o número de cédula"}
                         </p>
                     </div>
 
@@ -166,15 +166,18 @@ function Recuperar() {
                     ) : (
                         <form onSubmit={solicitar} className="login__form" autoComplete="off">
                             <div className="login__field">
-                                <label htmlFor="recuperar-identificacion">Identificación, cédula o correo</label>
+                                <label htmlFor="recuperar-identificacion">Correo o número de cédula</label>
                                 <input
                                     type="text"
                                     id="recuperar-identificacion"
-                                    placeholder="Ej.: 1234567890 o tu correo institucional"
+                                    placeholder="Ej.: correo@uajs.edu.co o 1023456789"
                                     value={identificacion}
                                     onChange={(e) => setIdentificacion(e.target.value)}
                                     required
                                 />
+                                <p className="login__hint">
+                                    El enlace llegará siempre al correo registrado en tu cuenta.
+                                </p>
                             </div>
 
                             <button

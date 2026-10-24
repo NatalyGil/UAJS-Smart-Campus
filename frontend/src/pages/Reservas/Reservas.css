@@ -844,3 +844,10 @@
         margin: 0 calc(-1 * var(--space-2));
     }
 }
+
+/* Ilustracion por tipo de recurso: ocupa todo el recuadro de la tarjeta. */
+.reservas__resource-image > .imagen-categoria {
+    position: absolute;
+    inset: 0;
+    border-radius: 0;
+}

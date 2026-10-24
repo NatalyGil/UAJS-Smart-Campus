@@ -764,3 +764,10 @@
         padding: 20px;
     }
 }
+/* Texto de ayuda bajo un campo (p. ej. recuperar contraseña). */
+.login__hint {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #7b8794;
+}

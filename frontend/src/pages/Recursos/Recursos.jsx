@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import Icon from "../../components/Icon/Icon";
+import ImagenCategoria from "../../components/ImagenCategoria/ImagenCategoria";
 import Modal from "../../components/Modal/Modal";
 import Input from "../../components/Input/Input";
 import SearchBar from "../../components/SearchBar/SearchBar";
@@ -455,7 +456,7 @@ function Recursos() {
                         return (
                             <div className="recursos__resource-card" key={recurso.id}>
                                 <div className={`recursos__resource-image ${estadoVar.bg}-bg`}>
-                                    <Icon name={categoriaVar.icono} size={44} />
+                                    <ImagenCategoria grupo="recurso" tipo={recurso.tipo} semilla={recurso.id} />
                                     <span className={`status ${estadoVar.clase}`}>
                                         {estadoVar.etiqueta}
                                     </span>
@@ -536,6 +537,13 @@ function Recursos() {
             >
                 {detalleRecurso && (
                     <div className="recursos__detalle">
+                        <div className="recursos__detalle-media">
+                            <ImagenCategoria
+                                grupo="recurso"
+                                tipo={detalleRecurso.tipo}
+                                semilla={detalleRecurso.id}
+                            />
+                        </div>
                         <div className="recursos__detalle-name">{detalleRecurso.nombre}</div>
                         <div className="recursos__detalle-grid">
                             <div className="recursos__detalle-item">

@@ -249,7 +249,9 @@ export const RECURSOS_BASE = [
 crearColeccion({
     clave: CLAVE_RECURSO,
     leer: () => resourcesApi.list(),
-    mapear: normalizarRecurso,
+    // La API devuelve la fila de BD (tipo_recurso, nombre_recurso...); primero
+    // se traduce al modelo de la UI y después se normaliza.
+    mapear: (raw) => normalizarRecurso(mapearRecurso(raw)),
     semilla: RECURSOS_BASE,
     crear: async (modelo) => {
         const creado = await resourcesApi.create(payloadDe(modelo));

@@ -311,7 +311,9 @@ export const EVENTOS_BASE = [
 crearColeccion({
     clave: CLAVE_EVENTOS,
     leer: () => eventsApi.list(),
-    mapear: normalizarEvento,
+    // La API devuelve la fila de BD (tipo_evento, nombre_evento...); primero
+    // se traduce al modelo de la UI y después se normaliza.
+    mapear: (raw) => normalizarEvento(mapearEvento(raw)),
     semilla: EVENTOS_BASE,
     crear: async (modelo) => {
         const creado = await eventsApi.create(payloadDe(modelo));

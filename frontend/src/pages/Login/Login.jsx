@@ -4,8 +4,8 @@ import useAuth from "../../context/useAuth";
 import BrandLogo from "../../components/BrandLogo/BrandLogo";
 import "./Login.css";
 
-// Credenciales de prueba. `identificacion` es la columna que valida
-// auth-service contra la tabla usuarios, no la cédula.
+// Credenciales de prueba. `identificacion` corresponde al usuario de la
+// tabla usuarios; auth-service también acepta el número de cédula.
 const CREDENCIALES = [
     { rol: "Administrador", user: "admin", pass: "admin123", color: "#d32f2f" },
     { rol: "Administrativo", user: "funcionario", pass: "func123", color: "#1976d2" },
@@ -151,11 +151,11 @@ function Login() {
 
                     <form onSubmit={handleSubmit} className="login__form" autoComplete="off">
                         <div className="login__field">
-                            <label htmlFor="login-identificacion">Cédula</label>
+                            <label htmlFor="login-identificacion">Usuario o cédula</label>
                             <input
                                 type="text"
                                 id="login-identificacion"
-                                placeholder="Número de cédula"
+                                placeholder="Usuario o número de cédula"
                                 value={identificacion}
                                 onChange={(e) => setIdentificacion(e.target.value)}
                                 autoComplete="username"
